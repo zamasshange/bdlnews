@@ -1,14 +1,14 @@
 import 'server-only'
 
-const apiKey = process.env.OPENROUTER_API_KEY ?? process.env.NVIDIA_API_KEY ?? process.env.NEXT_PUBLIC_NVIDIA_API_KEY ?? ''
-const model = process.env.OPENROUTER_MODEL ?? process.env.NVIDIA_MODEL ?? 'gpt-4o-mini'
-const apiUrl = process.env.OPENROUTER_API_URL ?? 'https://openrouter.ai/v1/chat/completions'
+const apiKey = process.env.OPENROUTER_API_KEY ?? ''
+const model = process.env.OPENROUTER_MODEL ?? 'gpt-4o-mini'
+const apiUrl = process.env.OPENROUTER_API_URL ?? 'https://api.openrouter.ai/v1/chat/completions'
 
 function safeText(value: unknown) {
   return typeof value === 'string' ? value : ''
 }
 
-function parseNvidiaResult(payload: any): string {
+function parseOpenRouterResult(payload: any): string {
   if (!payload) return ''
   if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
     return payload.output_text.trim()
@@ -67,7 +67,7 @@ export async function generateSonkeReply(message: string, context?: string) {
 
   if (!response.ok) {
     const bodyText = await response.text().catch(() => '')
-    const message = bodyText ? `NVIDIA request failed: ${response.status} ${bodyText}` : `NVIDIA request failed: ${response.status}`
+    const message = bodyText ? `OpenRouter request failed: ${response.status} ${bodyText}` : `OpenRouter request failed: ${response.status}`
     throw new Error(message)
   }
 
@@ -75,9 +75,9 @@ export async function generateSonkeReply(message: string, context?: string) {
   try {
     payload = await response.json()
   } catch {
-    throw new Error('NVIDIA returned a non-JSON response')
+    throw new Error('OpenRouter returned a non-JSON response')
   }
 
-  const text = parseNvidiaResult(payload)
+  const text = parseOpenRouterResult(payload)
   return text || 'Sonke could not generate a response right now.'
 }
