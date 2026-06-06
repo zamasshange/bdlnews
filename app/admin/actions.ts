@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireAdminUser } from '@/lib/admin/auth'
-import { hasSupabaseAdminConfig } from '@/lib/supabase/config'
+import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import type { ArticleStatus, CommentStatus, UserRole } from '@/lib/supabase/types'
 
@@ -23,6 +23,8 @@ function list(value: FormDataEntryValue | null) {
 }
 
 async function syncArticleTags(supabase: ReturnType<typeof createSupabaseAdminClient>, articleId: string, names: string[]) {
+  if (supabaseNewsTable !== 'articles') return
+
   await supabase.from('article_tags').delete().eq('article_id', articleId)
   for (const name of names) {
     const slug = slugify(name)
@@ -31,6 +33,12 @@ async function syncArticleTags(supabase: ReturnType<typeof createSupabaseAdminCl
       await supabase.from('article_tags').upsert({ article_id: articleId, tag_id: tag.data.id })
     }
   }
+}
+
+async function resolveAuthorName(supabase: ReturnType<typeof createSupabaseAdminClient>, authorId: string | null) {
+  if (!authorId) return 'BDL Newsroom'
+  const { data, error } = await supabase.from('authors').select('name').eq('id', authorId).maybeSingle()
+  return !error && data?.name ? String(data.name) : 'BDL Newsroom'
 }
 
 async function requireConfigured() {
@@ -53,47 +61,81 @@ export async function saveArticle(formData: FormData) {
     throw new Error('Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.')
   }
   const supabase = createSupabaseAdminClient()
+  const table = supabaseNewsTable
+  const isLegacyArticlesTable = table === 'articles'
   const id = String(formData.get('id') ?? '')
   const headline = String(formData.get('headline') ?? '').trim()
   const status = String(formData.get('status') ?? 'draft') as ArticleStatus
   const publishDate = String(formData.get('publish_date') || '')
   const keywords = list(formData.get('seo_keywords'))
   const tagNames = list(formData.get('tags')).length ? list(formData.get('tags')) : keywords
+  const authorId = String(formData.get('author_id') ?? '').trim() || null
+  const authorName = await resolveAuthorName(supabase, authorId)
 
-  const payload = {
+  const basePayload: Record<string, any> = {
     headline,
     subtitle: String(formData.get('subtitle') ?? ''),
     slug: slugify(String(formData.get('slug') || headline)),
     content: String(formData.get('content') ?? ''),
     featured_image: String(formData.get('featured_image') ?? ''),
-    gallery_images: list(formData.get('gallery_images')),
-    video_url: String(formData.get('video_url') ?? ''),
-    author_id: String(formData.get('author_id') ?? '') || null,
-    category_id: String(formData.get('category_id') ?? '') || null,
     seo_title: String(formData.get('seo_title') ?? ''),
     seo_description: String(formData.get('seo_description') ?? ''),
-    seo_keywords: keywords,
-    status,
     publish_date: publishDate || (status === 'published' || status === 'breaking' ? new Date().toISOString() : null),
-    updated_by: user.auth.id,
     updated_at: new Date().toISOString(),
-    ...(id ? {} : { created_by: user.auth.id }),
   }
 
-  const result = id
-    ? await supabase.from('articles').update(payload).eq('id', id).select('id').single()
-    : await supabase.from('articles').insert(payload).select('id').single()
+  const payload: Record<string, any> = isLegacyArticlesTable
+    ? {
+        ...basePayload,
+        gallery_images: list(formData.get('gallery_images')),
+        video_url: String(formData.get('video_url') ?? ''),
+        author_id: authorId || null,
+        category_id: String(formData.get('category_id') ?? '') || null,
+        seo_keywords: keywords,
+        status,
+      }
+    : {
+        title: headline,
+        content: String(formData.get('content') ?? ''),
+        author: authorName,
+      }
 
-  if (result.error) throw new Error(result.error.message)
-  await syncArticleTags(supabase, result.data.id, tagNames)
+  if (user.profileExists && isLegacyArticlesTable) {
+    payload.updated_by = user.auth.id
+    if (!id) payload.created_by = user.auth.id
+  }
+
+  const query = id
+    ? supabase.from(table).update(payload).eq('id', id).select('id').single()
+    : supabase.from(table).insert(payload).select('id').single()
+
+  const result = await query
+  if (result.error) {
+    const message = String(result.error.message ?? 'An unknown error occurred while saving the article.')
+    if (
+      message.includes('Could not find the table') ||
+      message.includes('does not exist') ||
+      result.error.code === 'PGRST205' ||
+      result.error.code === '42703'
+    ) {
+      throw new Error(`Failed to save article. The configured Supabase table "${table}" does not match the admin article schema. Ensure SUPABASE_NEWS_TABLE points to a valid article table or create the expected 'articles' schema in Supabase.`)
+    }
+    throw new Error(message)
+  }
+
+  if (isLegacyArticlesTable) {
+    await syncArticleTags(supabase, result.data.id, tagNames)
+  }
+
   revalidateNews()
   redirect('/admin/articles')
 }
 
 export async function deleteArticle(formData: FormData) {
   const supabase = await requireConfigured()
+  const table = supabaseNewsTable
   const id = String(formData.get('id') ?? '')
-  const { error } = await supabase.from('articles').delete().eq('id', id)
+  const { error } = await supabase.from(table).delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidateNews()
   revalidatePath('/admin/articles')
@@ -101,28 +143,41 @@ export async function deleteArticle(formData: FormData) {
 
 export async function duplicateArticle(formData: FormData) {
   const supabase = await requireConfigured()
+  const table = supabaseNewsTable
   const id = String(formData.get('id') ?? '')
-  const { data, error } = await supabase.from('articles').select('*').eq('id', id).single()
+  const { data, error } = await supabase.from(table).select('*').eq('id', id).single()
   if (error) throw new Error(error.message)
-  const { id: _id, created_at: _created, updated_at: _updated, ...article } = data
-  const copy = {
-    ...article,
-    headline: `${article.headline} Copy`,
-    slug: `${article.slug}-copy-${Date.now()}`,
-    status: 'draft' as ArticleStatus,
-    publish_date: null,
+  const { id: _id, created_at: _created, updated_at: _updated, ...article } = data as Record<string, any>
+  const copy = { ...article }
+
+  if ('headline' in copy && typeof copy.headline === 'string') {
+    copy.headline = `${copy.headline} Copy`
   }
-  const inserted = await supabase.from('articles').insert(copy)
+  if ('title' in copy && typeof copy.title === 'string') {
+    copy.title = `${copy.title} Copy`
+  }
+  if ('slug' in copy) {
+    copy.slug = slugify(String(copy.slug || copy.title || 'copy'))
+  } else if ('title' in copy) {
+    copy.slug = slugify(String(copy.title))
+  }
+  if ('status' in copy) copy.status = 'draft'
+  if ('publish_date' in copy) copy.publish_date = null
+
+  const inserted = await supabase.from(table).insert(copy)
   if (inserted.error) throw new Error(inserted.error.message)
   revalidatePath('/admin/articles')
 }
 
 export async function updateArticleStatus(formData: FormData) {
   const supabase = await requireConfigured()
+  if (supabaseNewsTable !== 'articles') {
+    throw new Error('Status update is not supported for the current SUPABASE_NEWS_TABLE configuration.')
+  }
   const id = String(formData.get('id') ?? '')
   const status = String(formData.get('status') ?? 'draft') as ArticleStatus
   const { error } = await supabase
-    .from('articles')
+    .from(supabaseNewsTable)
     .update({
       status,
       publish_date: status === 'published' || status === 'breaking' ? new Date().toISOString() : undefined,

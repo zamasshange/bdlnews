@@ -102,14 +102,14 @@ export function ArticleForm({
       {articleId && <input type="hidden" name="id" value={articleId} />}
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Headline">
-          <input className={inputClass} name="headline" defaultValue={article?.headline ?? ''} required />
+          <input className={inputClass} name="headline" defaultValue={article?.headline ?? article?.title ?? ''} required />
         </Field>
         <Field label="Slug">
           <input className={inputClass} name="slug" defaultValue={article?.slug ?? ''} />
         </Field>
       </div>
       <Field label="Subtitle">
-        <input className={inputClass} name="subtitle" defaultValue={article?.subtitle ?? ''} />
+        <input className={inputClass} name="subtitle" defaultValue={article?.subtitle ?? article?.dek ?? ''} />
       </Field>
       <Field label="Content">
         <textarea className={`${inputClass} min-h-56`} name="content" defaultValue={article?.content ?? ''} />
@@ -149,7 +149,7 @@ export function ArticleForm({
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <Field label="Featured Image URL">
-          <input className={inputClass} name="featured_image" defaultValue={article?.featured_image ?? ''} />
+          <input className={inputClass} name="featured_image" defaultValue={article?.featured_image ?? article?.image_url ?? article?.image ?? ''} />
           <input className="mt-2 text-sm" type="file" accept="image/*" onChange={(event) => event.target.files?.[0] && uploadMedia(event.target.files[0], 'featured_image')} />
         </Field>
         <Field label="Gallery URLs">
@@ -169,14 +169,25 @@ export function ArticleForm({
           <input className={inputClass} name="seo_description" defaultValue={article?.seo_description ?? ''} />
         </Field>
         <Field label="SEO Keywords">
-          <input className={inputClass} name="seo_keywords" defaultValue={(article?.seo_keywords ?? []).join(', ')} />
+          <input className={inputClass} name="seo_keywords" defaultValue={(article?.seo_keywords ?? article?.tags ?? []).join(', ')} />
         </Field>
       </div>
       <Field label="Tags">
-        <input className={inputClass} name="tags" defaultValue={(article?.seo_keywords ?? []).join(', ')} />
+        <input className={inputClass} name="tags" defaultValue={(article?.tags ?? article?.seo_keywords ?? []).join(', ')} />
       </Field>
       <Field label="Publish Date">
-        <input className={inputClass} type="datetime-local" name="publish_date" defaultValue={article?.publish_date ? article.publish_date.slice(0, 16) : ''} />
+        <input
+          className={inputClass}
+          type="datetime-local"
+          name="publish_date"
+          defaultValue={
+            article?.publish_date
+              ? String(article.publish_date).slice(0, 16)
+              : article?.published_at
+              ? String(article.published_at).slice(0, 16)
+              : ''
+          }
+        />
       </Field>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-slate-500">{isPending ? 'Autosave queued...' : autosaveState}</p>

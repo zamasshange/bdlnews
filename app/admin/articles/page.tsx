@@ -5,6 +5,7 @@ import { ProtectedAdminPage } from '@/components/admin/protected-admin-page'
 import { AdminPageHeader, AdminTable, Td, Th } from '@/components/admin/ui'
 import { Button } from '@/components/ui/button'
 import { getAdminCollections } from '@/lib/admin/data'
+import { supabaseNewsTable } from '@/lib/supabase/config'
 
 export default async function AdminArticlesPage() {
   const { articles } = await getAdminCollections()
@@ -28,7 +29,13 @@ export default async function AdminArticlesPage() {
                     <Pencil className="size-4" />
                   </Link>
                   <form action={duplicateArticle}><input type="hidden" name="id" value={article.id} /><Button type="submit" variant="outline" size="icon"><Copy className="size-4" /></Button></form>
-                  <form action={updateArticleStatus}><input type="hidden" name="id" value={article.id} /><input type="hidden" name="status" value="published" /><Button type="submit" variant="outline" size="icon"><Send className="size-4" /></Button></form>
+                  {supabaseNewsTable === 'articles' ? (
+                    <form action={updateArticleStatus}>
+                      <input type="hidden" name="id" value={article.id} />
+                      <input type="hidden" name="status" value="published" />
+                      <Button type="submit" variant="outline" size="icon"><Send className="size-4" /></Button>
+                    </form>
+                  ) : null}
                   <form action={deleteArticle}><input type="hidden" name="id" value={article.id} /><Button type="submit" variant="destructive" size="icon"><Trash2 className="size-4" /></Button></form>
                 </div>
               </Td>

@@ -166,6 +166,15 @@ export async function getCategoryBySlug(slug: string) {
 export async function getArticlesByCategorySlug(slug: string, limit = 50): Promise<Article[]> {
   if (!hasSupabaseAdminConfig()) return []
   const supabase = createSupabaseAdminClient()
+  if (supabaseNewsTable !== 'articles') {
+    const { data, error } = await supabase.from(supabaseNewsTable).select('*').limit(200)
+    if (error || !data) return []
+    return data
+      .map((row) => mapFlexibleArticle(row as Record<string, any>))
+      .filter((article) => article.category.toLowerCase() === slug.toLowerCase())
+      .slice(0, limit)
+  }
+
   const { data, error } = await supabase
     .from('articles')
     .select('*, authors(*), categories!inner(*)')
@@ -180,6 +189,7 @@ export async function getArticlesByCategorySlug(slug: string, limit = 50): Promi
 
 export async function getAuthorProfile(id: string) {
   if (!hasSupabaseAdminConfig()) return null
+  if (supabaseNewsTable !== 'articles') return null
   const supabase = createSupabaseAdminClient()
   const [{ data: author, error }, articles] = await Promise.all([
     supabase.from('authors').select('*').eq('id', id).maybeSingle(),
@@ -218,6 +228,27 @@ export async function searchArticles(query: string, limit = 20): Promise<Article
   if (!value) return getPublishedArticles(limit)
 
   const supabase = createSupabaseAdminClient()
+  if (supabaseNewsTable !== 'articles') {
+    const { data, error } = await supabase.from(supabaseNewsTable).select('*').limit(200)
+    if (error || !data) return []
+    const needle = value.toLowerCase()
+    return data
+      .map((row) => mapFlexibleArticle(row as Record<string, any>))
+      .filter((article) =>
+        [
+          article.title,
+          article.dek,
+          article.content,
+          article.category,
+          article.author,
+          ...(article.tags ?? []),
+        ]
+          .filter(Boolean)
+          .some((field) => String(field).toLowerCase().includes(needle)),
+      )
+      .slice(0, limit)
+  }
+
   const { data, error } = await supabase
     .from('articles')
     .select('*, authors(*), categories(*)')
@@ -247,12 +278,23 @@ export async function searchArticles(query: string, limit = 20): Promise<Article
 export async function getTrendingArticles(kind = 'trending', limit = 10): Promise<Article[]> {
   if (!hasSupabaseAdminConfig()) return []
   const supabase = createSupabaseAdminClient()
-  let query = supabase
+  if (supabaseNewsTable !== 'articles') {
+    const { data, error } = await supabase.from(supabaseNewsTable).select('*').limit(200)
+    if (error || !data) return []
+    return data
+      .map((row) => mapFlexibleArticle(row as Record<string, any>))
+      .filter((article) => article.title)
+      .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+      .slice(0, limit)
+  }
+
+  const supabaseQuery = supabase
     .from('articles')
     .select('*, authors(*), categories(*)')
     .in('status', ['published', 'breaking'])
     .limit(limit)
 
+  let query = supabaseQuery
   if (kind === 'recent') query = query.order('publish_date', { ascending: false, nullsFirst: false })
   else if (kind === 'discussed') query = query.order('comment_count', { ascending: false })
   else if (kind === 'shared') query = query.order('share_count', { ascending: false })
