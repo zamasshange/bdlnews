@@ -1,8 +1,8 @@
 import 'server-only'
 
 const apiKey = process.env.OPENROUTER_API_KEY ?? ''
-const model = process.env.OPENROUTER_MODEL ?? 'gpt-4o-mini'
-const apiUrl = process.env.OPENROUTER_API_URL ?? 'https://openrouter.ai/v1/chat/completions'
+const model = process.env.OPENROUTER_MODEL ?? 'openai/gpt-4o-mini'
+const apiUrl = process.env.OPENROUTER_API_URL ?? 'https://openrouter.ai/api/v1/chat/completions'
 
 function safeText(value: unknown) {
   return typeof value === 'string' ? value : ''
