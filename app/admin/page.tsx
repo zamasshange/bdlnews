@@ -1,6 +1,7 @@
 import { AnalyticsChart } from '@/components/admin/analytics-chart'
 import { ProtectedAdminPage } from '@/components/admin/protected-admin-page'
 import { AdminPageHeader, AdminTable, StatCard, Td, Th } from '@/components/admin/ui'
+import { Logo } from '@/components/logo'
 import { getAdminCollections, getDashboardStats, getViewsByDay } from '@/lib/admin/data'
 import { formatCount } from '@/lib/data'
 
@@ -9,12 +10,26 @@ export default async function AdminDashboardPage() {
 
   return (
     <ProtectedAdminPage>
-      <AdminPageHeader
-        title="Newsroom Dashboard"
-        description="Publishing status, audience activity, and the latest editorial movement across BDL News."
-        actionHref="/admin/articles/create"
-        actionLabel="New article"
-      />
+      <div className="mb-6 grid gap-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-[1fr_auto] md:items-end">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-primary">BDL Newsroom</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">Dashboard</h1>
+          <p className="mt-3 max-w-2xl text-sm text-slate-500">
+            Publishing status, audience pulse, and editorial momentum for a modern newsroom.
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="hidden h-20 w-32 items-center justify-center rounded-3xl bg-slate-100 p-3 md:flex">
+            <Logo className="h-full w-full object-contain" />
+          </div>
+          <a
+            href="/admin/articles/create"
+            className="inline-flex h-12 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-primary"
+          >
+            New article
+          </a>
+        </div>
+      </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total Articles" value={stats.totalArticles} />
         <StatCard label="Published" value={stats.publishedArticles} />

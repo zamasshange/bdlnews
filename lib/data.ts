@@ -38,6 +38,7 @@ export interface Article {
   engagement: number
   sentiment: 'positive' | 'neutral' | 'controversial'
   trendDelta: number
+  externalUrl?: string
 }
 
 export const NAV_LINKS = [

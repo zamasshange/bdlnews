@@ -1,14 +1,55 @@
 import 'server-only'
 
-import { type Article, type Category, type LiveItem } from '@/lib/data'
+import { type Article, type Category, type LiveItem, NAV_LINKS } from '@/lib/data'
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
+import { fetchExternalNews, type ExternalNewsItem } from '@/lib/external-news'
 import type { ArticleRow } from '@/lib/supabase/types'
 
 const categoryFallback: Category = 'World'
 
 function toCategory(value?: string | null): Category {
   return (value as Category | undefined) ?? categoryFallback
+}
+
+function slugifyCategory(value?: string | null) {
+  return String(value ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+}
+
+function mapExternalNewsItem(row: ExternalNewsItem): Article {
+  const title = row.title || 'Untitled story'
+  const publishedAt = row.publishedAt || new Date().toISOString()
+  return {
+    id: row.url,
+    slug: slugifyCategory(title),
+    title,
+    dek: row.description || '',
+    content: row.description || '',
+    category: toCategory(row.category ?? row.source ?? undefined),
+    image: row.imageUrl || '/placeholder.jpg',
+    author: row.source || 'BDL Newsroom',
+    authorRole: 'External feed',
+    readingTime: Math.max(3, Math.ceil((row.description ?? '').split(/\s+/).filter(Boolean).length / 220)),
+    publishedAt,
+    region: row.country || 'Global',
+    readers: 0,
+    engagement: 0,
+    sentiment: 'neutral',
+    trendDelta: 12,
+    externalUrl: row.url,
+  }
+}
+
+export async function getExternalNewsItems(query?: string, limit = 12): Promise<Article[]> {
+  const results = await fetchExternalNews({ provider: 'all', query })
+  return results
+    .filter((item) => item.title)
+    .slice(0, limit)
+    .map(mapExternalNewsItem)
 }
 
 function estimateReadingTime(content?: string | null) {
@@ -160,6 +201,10 @@ export async function getCategoryBySlug(slug: string) {
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase.from('categories').select('*').eq('slug', slug).maybeSingle()
   if (error) return null
+  if (!data) {
+    const name = NAV_LINKS.find((item) => slugifyCategory(item) === slug)
+    return name ? { name, slug } : null
+  }
   return data
 }
 
@@ -169,10 +214,14 @@ export async function getArticlesByCategorySlug(slug: string, limit = 50): Promi
   if (supabaseNewsTable !== 'articles') {
     const { data, error } = await supabase.from(supabaseNewsTable).select('*').limit(200)
     if (error || !data) return []
-    return data
+    const filtered = data
       .map((row) => mapFlexibleArticle(row as Record<string, any>))
-      .filter((article) => article.category.toLowerCase() === slug.toLowerCase())
+      .filter((article) => slugifyCategory(article.category) === slug)
       .slice(0, limit)
+    if (filtered.length) return filtered
+    const categoryName = NAV_LINKS.find((item) => slugifyCategory(item) === slug)
+    if (categoryName) return getExternalNewsItems(categoryName, limit)
+    return []
   }
 
   const { data, error } = await supabase

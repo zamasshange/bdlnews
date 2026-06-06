@@ -8,19 +8,51 @@ import {
   type Article,
   type Category,
 } from '@/lib/data'
-import { getLiveUpdates, getPublishedArticles, getTrendingArticles } from '@/lib/news'
+import { getExternalNewsItems, getLiveUpdates, getPublishedArticles, getTrendingArticles } from '@/lib/news'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const [articles, liveFeed, trendingArticles] = await Promise.all([getPublishedArticles(), getLiveUpdates(), getTrendingArticles()])
   if (!articles.length) {
+    const externalArticles = await getExternalNewsItems()
     return (
       <SiteShell showTicker>
         <section className="jox-container py-10 md:py-14">
-          <h1 className="max-w-5xl text-4xl font-medium leading-[1.08] text-foreground md:text-5xl">
-            No published stories yet.
-          </h1>
+          <div className="grid gap-10">
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-primary">External News Feed</p>
+              <h1 className="mt-4 max-w-4xl text-4xl font-semibold leading-tight text-foreground md:text-5xl">
+                Fresh stories from NewsData, GNews, and Mediastack
+              </h1>
+              <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground">
+                The newsroom is empty for now, so we’re surfacing live external headlines with images and source links.
+              </p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {externalArticles.map((article) => (
+                <a
+                  key={article.externalUrl ?? article.slug}
+                  href={article.externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group overflow-hidden rounded-3xl border border-border bg-white shadow-sm transition hover:border-primary"
+                >
+                  <div className="relative h-52 overflow-hidden bg-muted">
+                    <Image src={article.image} alt={article.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" unoptimized={article.image?.startsWith('http')} />
+                  </div>
+                  <div className="p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">{article.category}</p>
+                    <h2 className="mt-3 text-xl font-semibold leading-tight text-foreground transition group-hover:text-primary">
+                      {article.title}
+                    </h2>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">{article.dek}</p>
+                    <p className="mt-5 text-xs uppercase tracking-[0.2em] text-slate-500">{article.author} • {new Date(article.publishedAt).toLocaleDateString()}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
         </section>
       </SiteShell>
     )

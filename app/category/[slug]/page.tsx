@@ -1,6 +1,5 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowUpRight, Sparkles } from 'lucide-react'
 import { ArticleCard } from '@/components/article-card'
 import { SiteShell } from '@/components/site-shell'
@@ -44,11 +43,9 @@ export default async function CategoryPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const category = await getCategoryBySlug(slug)
-  if (!category) notFound()
+  const category = (await getCategoryBySlug(slug)) ?? { name: titleFromSlug(slug) ?? 'Stories', slug }
 
   const shownArticles = await getArticlesByCategorySlug(slug)
-  if (!shownArticles.length) notFound()
   const lead = shownArticles[0]
 
   return (
@@ -88,47 +85,61 @@ export default async function CategoryPage({
       </section>
 
       <section className="jox-container grid gap-8 pb-12 lg:grid-cols-[0.9fr_1fr]">
-        <Link href={`/article/${lead.slug}`} className="story-link group block">
-          <div className="relative aspect-[1.35] overflow-hidden bg-muted">
-            <Image
-              src={lead.image}
-              alt={lead.title}
-              fill
-              sizes="(max-width: 1024px) 100vw, 45vw"
-              className="story-image object-cover"
-            />
+        {shownArticles.length ? (
+          <>
+            <div className="story-link group block">
+              <div className="relative aspect-[1.35] overflow-hidden bg-muted">
+                <Image
+                  src={lead.image}
+                  alt={lead.title}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 45vw"
+                  className="story-image object-cover"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-center">
+              <p className="mb-3 text-xs font-black uppercase text-primary">
+                Lead Story / {lead.readingTime} Min
+              </p>
+              <Link href={`/article/${lead.slug}`} className="group">
+                <h2 className="text-4xl font-semibold leading-tight text-foreground transition group-hover:text-primary md:text-5xl">
+                  {lead.title}
+                </h2>
+              </Link>
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
+                {lead.dek}
+              </p>
+              <Link
+                href={`/article/${lead.slug}`}
+                className="mt-6 inline-flex w-fit items-center gap-2 bg-foreground px-5 py-3 text-xs font-black uppercase text-background transition hover:bg-primary"
+              >
+                Read story
+                <ArrowUpRight className="size-4" />
+              </Link>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-3xl border border-border bg-card p-12 text-center">
+            <p className="text-sm uppercase tracking-[0.3em] text-primary">{category.name}</p>
+            <h2 className="mt-4 text-4xl font-semibold text-foreground">No stories available yet.</h2>
+            <p className="mt-4 text-base leading-7 text-muted-foreground">
+              We don’t have any published stories in this category yet, but the page is ready and will update as new content arrives.
+            </p>
           </div>
-        </Link>
-
-        <div className="flex flex-col justify-center">
-          <p className="mb-3 text-xs font-black uppercase text-primary">
-            Lead Story / {lead.readingTime} Min
-          </p>
-          <Link href={`/article/${lead.slug}`} className="group">
-            <h2 className="text-4xl font-semibold leading-tight text-foreground transition group-hover:text-primary md:text-5xl">
-              {lead.title}
-            </h2>
-          </Link>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
-            {lead.dek}
-          </p>
-          <Link
-            href={`/article/${lead.slug}`}
-            className="mt-6 inline-flex w-fit items-center gap-2 bg-foreground px-5 py-3 text-xs font-black uppercase text-background transition hover:bg-primary"
-          >
-            Read story
-            <ArrowUpRight className="size-4" />
-          </Link>
-        </div>
+        )}
       </section>
 
-      <section className="border-y border-border bg-card">
-        <div className="jox-container grid gap-5 py-12 sm:grid-cols-2 lg:grid-cols-3">
-          {shownArticles.slice(1).map((article) => (
-            <ArticleCard key={article.slug} article={article} />
-          ))}
-        </div>
-      </section>
+      {shownArticles.length > 1 && (
+        <section className="border-y border-border bg-card">
+          <div className="jox-container grid gap-5 py-12 sm:grid-cols-2 lg:grid-cols-3">
+            {shownArticles.slice(1).map((article) => (
+              <ArticleCard key={article.slug} article={article} />
+            ))}
+          </div>
+        </section>
+      )}
     </SiteShell>
   )
 }

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { BarChart3, FileText, Folder, ImageIcon, LayoutDashboard, MessageSquare, Radio, Settings, Tags, UserPen, Users } from 'lucide-react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/logo'
 
 const nav = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -37,8 +38,15 @@ export function AdminShell({
     <div className="min-h-screen bg-[#f7f8fa] text-slate-950">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white lg:block">
         <div className="border-b border-slate-200 p-5">
-          <p className="text-xs font-black uppercase text-primary">BDL News</p>
-          <h1 className="mt-1 text-2xl font-semibold">Admin Desk</h1>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 overflow-hidden rounded-2xl bg-slate-100 p-2 shadow-inner">
+              <Logo className="h-full w-full object-contain" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase text-primary">BDL News</p>
+              <h1 className="mt-1 text-2xl font-semibold">Admin Desk</h1>
+            </div>
+          </div>
         </div>
         <nav className="grid gap-1 p-3">
           {nav.map((item) => (

@@ -8,13 +8,21 @@ export function BreakingTicker() {
   const [ticker, setTicker] = useState(breakingTicker)
 
   useEffect(() => {
-    fetch('/api/live-updates')
+    fetch('/api/external-news?provider=all')
       .then((res) => res.json())
       .then((payload) => {
-        const headlines = payload.updates?.map((item: { headline: string }) => item.headline).filter(Boolean)
+        const headlines = payload.articles?.map((item: { title: string }) => item.title).filter(Boolean)
         if (headlines?.length) setTicker(headlines)
       })
-      .catch(() => undefined)
+      .catch(() => {
+        fetch('/api/live-updates')
+          .then((res) => res.json())
+          .then((payload) => {
+            const headlines = payload.updates?.map((item: { headline: string }) => item.headline).filter(Boolean)
+            if (headlines?.length) setTicker(headlines)
+          })
+          .catch(() => undefined)
+      })
   }, [])
 
   const items = [...ticker, ...ticker]
