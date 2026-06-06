@@ -1,6 +1,6 @@
 import 'server-only'
 
-const apiKey = process.env.NVIDIA_API_KEY ?? ''
+const apiKey = process.env.NVIDIA_API_KEY ?? process.env.NEXT_PUBLIC_NVIDIA_API_KEY ?? ''
 const model = process.env.NVIDIA_MODEL ?? 'nvidia/nemotron-3-super-120b-a12b:free'
 const apiUrl = process.env.NVIDIA_API_URL ?? `https://api.nvidia.com/v1/models/${encodeURIComponent(model)}:generate`
 

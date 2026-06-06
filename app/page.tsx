@@ -95,6 +95,7 @@ export default async function HomePage() {
   const externalPool = [...externalArticles]
   let externalIndex = 0
 
+  const secondFeature = articles[8] ?? externalPool[externalIndex++] ?? articles[0]
   const featureTwo = articles[5] ?? externalPool[externalIndex++] ?? articles[0]
   const sideStories = [...articles.slice(1, 5)]
   while (sideStories.length < 4 && externalIndex < externalPool.length) {
@@ -138,6 +139,28 @@ export default async function HomePage() {
               readingTime={featured.readingTime}
               className="mt-5"
             />
+          </article>
+          <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+            <NewsLink article={secondFeature} className="group block">
+              <div className="relative aspect-[1.3] overflow-hidden bg-muted">
+                <Image
+                  src={secondFeature.image}
+                  alt={secondFeature.title}
+                  fill
+                  className="object-cover"
+                  unoptimized={secondFeature.image?.startsWith('http')}
+                />
+              </div>
+              <div className="p-5">
+                <p className="text-xs uppercase tracking-[0.3em] text-primary">{secondFeature.category}</p>
+                <h2 className="mt-3 text-xl font-semibold leading-tight text-foreground transition group-hover:text-primary">
+                  {secondFeature.title}
+                </h2>
+                <p className="mt-3 text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                  {secondFeature.readingTime} Min • {new Date(secondFeature.publishedAt).toLocaleDateString()}
+                </p>
+              </div>
+            </NewsLink>
           </article>
 
           <aside className="grid content-start">

@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Sparkles, X, ArrowUp } from 'lucide-react'
+import { X, ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Msg {
@@ -61,14 +61,13 @@ export function AiAssistant() {
       <motion.button
         onClick={() => setOpen(true)}
         aria-label="Open Sonke assistant"
-        className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-primary-foreground shadow-xl shadow-primary/30"
+        className="fixed bottom-5 right-5 z-50 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/30"
         initial={{ scale: 0 }}
         animate={{ scale: open ? 0 : 1 }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.96 }}
       >
-        <Sparkles className="size-5" />
-        <span className="hidden text-sm font-semibold sm:block">Ask Sonke</span>
+        Ask Sonke
       </motion.button>
 
       <AnimatePresence>

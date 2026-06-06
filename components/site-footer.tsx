@@ -72,14 +72,14 @@ export function SiteFooter() {
             </div>
             <div>
               <p className="mb-2 text-xs font-black uppercase text-primary">Contact Us</p>
-              <p>hello@bdlnews.com</p>
+              <p>burdolar@gmail.com</p>
               <p>+1 (406) 555-0120</p>
             </div>
           </div>
         </div>
 
         <div className="mt-10 flex flex-col gap-3 border-t border-border pt-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} BDL News</p>
+          <p>© 2026 BDL Corp</p>
           <p>Designed as a fast, AI-led newsroom.</p>
         </div>
       </div>
