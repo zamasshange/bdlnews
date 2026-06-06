@@ -10,12 +10,46 @@ import {
 } from '@/lib/data'
 import { getExternalNewsItems, getLiveUpdates, getPublishedArticles, getTrendingArticles } from '@/lib/news'
 
+function NewsLink({
+  article,
+  className,
+  children,
+}: {
+  article: Article
+  className: string
+  children: React.ReactNode
+}) {
+  if (article.externalUrl) {
+    return (
+      <a
+        href={article.externalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        {children}
+      </a>
+    )
+  }
+
+  return (
+    <Link href={`/article/${article.slug}`} className={className}>
+      {children}
+    </Link>
+  )
+}
+
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const [articles, liveFeed, trendingArticles] = await Promise.all([getPublishedArticles(), getLiveUpdates(), getTrendingArticles()])
+  const [articles, liveFeed, trendingArticles, externalArticles] = await Promise.all([
+    getPublishedArticles(),
+    getLiveUpdates(),
+    getTrendingArticles(),
+    getExternalNewsItems(),
+  ])
+
   if (!articles.length) {
-    const externalArticles = await getExternalNewsItems()
     return (
       <SiteShell showTicker>
         <section className="jox-container py-10 md:py-14">
@@ -58,10 +92,25 @@ export default async function HomePage() {
     )
   }
   const featured = articles[0]
-  const sideStories = articles.slice(1, 5)
-  const featureTwo = articles[5] ?? articles[0]
+  const externalPool = [...externalArticles]
+  let externalIndex = 0
+
+  const featureTwo = articles[5] ?? externalPool[externalIndex++] ?? articles[0]
+  const sideStories = [...articles.slice(1, 5)]
+  while (sideStories.length < 4 && externalIndex < externalPool.length) {
+    sideStories.push(externalPool[externalIndex++])
+  }
+
   const gridStories = [articles[1], articles[4], articles[6], articles[7]].filter(Boolean)
-  const resources = articles.slice(5, 8)
+  while (gridStories.length < 4 && externalIndex < externalPool.length) {
+    gridStories.push(externalPool[externalIndex++])
+  }
+
+  const resources = [...articles.slice(5, 8)]
+  while (resources.length < 3 && externalIndex < externalPool.length) {
+    resources.push(externalPool[externalIndex++])
+  }
+
   const trendingTopics = trendingArticles.length ? trendingArticles.map((article) => article.title) : articles.map((article) => article.title)
 
   return (
@@ -93,7 +142,7 @@ export default async function HomePage() {
 
           <aside className="grid content-start">
             {sideStories.map((article) => (
-              <SideRailStory key={article.slug} article={article} />
+              <SideRailStory key={article.externalUrl ?? article.slug} article={article} />
             ))}
           </aside>
         </div>
@@ -101,7 +150,7 @@ export default async function HomePage() {
 
       <section className="jox-container grid gap-10 pb-14 lg:grid-cols-[0.95fr_1fr]">
         <article className="story-link group">
-          <Link href={`/article/${featureTwo.slug}`} className="block">
+          <NewsLink article={featureTwo} className="block">
             <div className="relative aspect-[1.18] overflow-hidden bg-muted">
               <Image
                 src={featureTwo.image}
@@ -120,12 +169,12 @@ export default async function HomePage() {
             <h2 className="mt-5 max-w-4xl text-3xl font-medium leading-tight text-foreground transition group-hover:text-primary md:text-5xl">
               {featureTwo.title}
             </h2>
-          </Link>
+          </NewsLink>
         </article>
 
         <div className="grid gap-x-8 gap-y-9 md:grid-cols-2">
           {gridStories.map((article) => (
-            <GridStory key={article.slug} article={article} />
+            <GridStory key={article.externalUrl ?? article.slug} article={article} />
           ))}
         </div>
       </section>
@@ -152,9 +201,9 @@ export default async function HomePage() {
         <SectionTitle kicker="Articles & Resources" title="More To Read" />
         <div className="grid gap-5 md:grid-cols-3">
           {resources.map((article) => (
-            <Link
-              key={article.slug}
-              href={`/article/${article.slug}`}
+            <NewsLink
+              key={article.externalUrl ?? article.slug}
+              article={article}
               className="group border-t border-border pt-4"
             >
               <p className="mb-3 text-xs font-black uppercase text-primary">
@@ -170,7 +219,43 @@ export default async function HomePage() {
               <span className="mt-5 inline-flex items-center gap-1 text-xs font-black uppercase text-foreground">
                 Read More <ArrowUpRight className="size-3.5 text-primary" />
               </span>
-            </Link>
+            </NewsLink>
+          ))}
+        </div>
+      </section>
+
+      <section className="jox-container grid gap-8 pb-14 lg:grid-cols-[0.38fr_1fr]">
+        <SectionTitle kicker="External Wire" title="Live News from the Feed" />
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          {externalArticles.map((article) => (
+            <a
+              key={article.externalUrl ?? article.slug}
+              href={article.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group overflow-hidden rounded-3xl border border-border bg-white shadow-sm transition hover:border-primary"
+            >
+              <div className="relative h-52 overflow-hidden bg-muted">
+                <Image
+                  src={article.image}
+                  alt={article.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover"
+                  unoptimized={article.image?.startsWith('http')}
+                />
+              </div>
+              <div className="p-5">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">{article.category}</p>
+                <h2 className="mt-3 text-xl font-semibold leading-tight text-foreground transition group-hover:text-primary">
+                  {article.title}
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{article.dek}</p>
+                <p className="mt-5 text-xs uppercase tracking-[0.2em] text-slate-500">
+                  {article.author} • {new Date(article.publishedAt).toLocaleDateString()}
+                </p>
+              </div>
+            </a>
           ))}
         </div>
       </section>
@@ -246,8 +331,8 @@ function StoryMeta({
 
 function SideRailStory({ article }: { article: Article }) {
   return (
-    <Link
-      href={`/article/${article.slug}`}
+    <NewsLink
+      article={article}
       className="story-link group grid grid-cols-[minmax(120px,0.86fr)_1fr] gap-6 border-b border-border py-6 first:pt-0"
     >
       <div className="relative aspect-[1.22] overflow-hidden bg-muted">
@@ -270,13 +355,13 @@ function SideRailStory({ article }: { article: Article }) {
           linked={false}
         />
       </div>
-    </Link>
+    </NewsLink>
   )
 }
 
 function GridStory({ article }: { article: Article }) {
   return (
-    <Link href={`/article/${article.slug}`} className="story-link group border-b border-border pb-8">
+    <NewsLink article={article} className="story-link group border-b border-border pb-8">
       <div className="relative aspect-[1.55] overflow-hidden bg-muted">
         <Image
           src={article.image}
@@ -295,7 +380,7 @@ function GridStory({ article }: { article: Article }) {
       <h3 className="mt-5 text-2xl font-medium leading-tight text-foreground transition group-hover:text-primary">
         {article.title}
       </h3>
-    </Link>
+    </NewsLink>
   )
 }
 

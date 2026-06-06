@@ -35,7 +35,7 @@ export function BreakingTicker() {
         <motion.div
           className="flex shrink-0 items-center gap-7 whitespace-nowrap pr-7 text-sm font-black uppercase"
           animate={{ x: ['0%', '-50%'] }}
-          transition={{ duration: 34, ease: 'linear', repeat: Infinity }}
+          transition={{ duration: 72, ease: 'linear', repeat: Infinity }}
         >
           {items.map((t, i) => (
             <span key={i} className="flex items-center gap-7">
