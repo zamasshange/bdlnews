@@ -133,11 +133,10 @@ export default async function ArticlePage({
           <aside className="h-fit border border-border bg-background p-5">
             <p className="mb-3 flex items-center gap-2 text-xs font-black uppercase text-primary">
               <Bot className="size-4" />
-              Ask BDL
+              Ask Sonke
             </p>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Need the timeline, impact, or simpler explanation? Open the assistant and ask
-              about this story.
+              Need a summary, a quick explanation, or a filtered view of the latest updates? Open Sonke and ask about this story.
             </p>
           </aside>
         </section>

@@ -11,22 +11,11 @@ interface Msg {
 }
 
 const QUICK = [
-  'Explain this story',
-  'Summarize article',
-  'What happened before this?',
-  'Why does this matter?',
+  'Summarize the latest headlines',
+  'Show me technology news',
+  'Explain why this matters',
+  'What are the biggest stories today?',
 ]
-
-const CANNED: Record<string, string> = {
-  'Explain this story':
-    'In short: 63 countries agreed to a binding plan to triple clean-energy capacity by 2032, backed by a $400B fund. It is the most ambitious climate commitment to date and sets enforceable national targets.',
-  'Summarize article':
-    'Negotiators in Geneva finalized a landmark accord. Key points: tripled clean-energy goal, a $400B transition fund, and accountability checkpoints every two years. Markets and analysts reacted positively.',
-  'What happened before this?':
-    'This builds on three prior summits that ended without binding targets. Pressure mounted after a record year of extreme weather and a coalition of developing nations demanded a dedicated transition fund.',
-  'Why does this matter?':
-    'If implemented, the accord could reshape global energy markets, accelerate the shift away from fossil fuels, and unlock major investment in emerging economies — affecting prices, jobs, and emissions worldwide.',
-}
 
 export function AiAssistant() {
   const [open, setOpen] = useState(false)
@@ -34,29 +23,43 @@ export function AiAssistant() {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: 'assistant',
-      text: 'Hi, I’m the BDL intelligence assistant. Ask me to explain, summarize, or give context on any story.',
+      text: 'Hi, I’m Sonke — your AI-powered news assistant. Ask me to summarize headlines, explain stories, or filter news for what matters to you.',
     },
   ])
+  const [isLoading, setIsLoading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, open])
 
-  function send(text: string) {
+  async function send(text: string) {
     if (!text.trim()) return
-    const reply =
-      CANNED[text] ??
-      'Based on BDL’s coverage, here is the key takeaway: this development is significant and connected to several ongoing stories. I can break down the facts, timeline, and impact if you’d like.'
-    setMessages((m) => [...m, { role: 'user', text }, { role: 'assistant', text: reply }])
+    setMessages((m) => [...m, { role: 'user', text }])
     setInput('')
+    setIsLoading(true)
+
+    try {
+      const response = await fetch('/api/sonke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      })
+      const payload = await response.json()
+      const reply = payload.text || payload.error || 'Sonke could not answer that right now.'
+      setMessages((m) => [...m, { role: 'assistant', text: reply }])
+    } catch {
+      setMessages((m) => [...m, { role: 'assistant', text: 'Something went wrong while connecting to Sonke. Please try again.' }])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
     <>
       <motion.button
         onClick={() => setOpen(true)}
-        aria-label="Open AI assistant"
+        aria-label="Open Sonke assistant"
         className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-primary-foreground shadow-xl shadow-primary/30"
         initial={{ scale: 0 }}
         animate={{ scale: open ? 0 : 1 }}
@@ -64,7 +67,7 @@ export function AiAssistant() {
         whileTap={{ scale: 0.96 }}
       >
         <Sparkles className="size-5" />
-        <span className="hidden text-sm font-semibold sm:block">Ask BDL</span>
+        <span className="hidden text-sm font-semibold sm:block">Ask Sonke</span>
       </motion.button>
 
       <AnimatePresence>
@@ -82,9 +85,9 @@ export function AiAssistant() {
                   <Bot className="size-4" />
                 </span>
                 <div className="leading-tight">
-                  <p className="text-sm font-semibold">BDL Assistant</p>
+                  <p className="text-sm font-semibold">Sonke</p>
                   <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <span className="size-1.5 rounded-full bg-positive" /> Online
+                    <span className="size-1.5 rounded-full bg-positive" /> Live
                   </p>
                 </div>
               </div>
@@ -122,6 +125,7 @@ export function AiAssistant() {
                 {QUICK.map((q) => (
                   <button
                     key={q}
+                    type="button"
                     onClick={() => send(q)}
                     className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground transition hover:border-primary hover:text-primary"
                   >
@@ -129,6 +133,11 @@ export function AiAssistant() {
                   </button>
                 ))}
               </div>
+              {isLoading && (
+                <div className="mb-3 rounded-2xl border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
+                  Sonke is summarizing the latest answer...
+                </div>
+              )}
               <form
                 onSubmit={(e) => {
                   e.preventDefault()
@@ -140,12 +149,14 @@ export function AiAssistant() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask about any story…"
-                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  disabled={isLoading}
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:text-muted-foreground/70"
                 />
                 <button
                   type="submit"
                   aria-label="Send"
-                  className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90"
+                  disabled={isLoading}
+                  className="flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <ArrowUp className="size-4" />
                 </button>
