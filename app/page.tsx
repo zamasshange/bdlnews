@@ -256,13 +256,11 @@ export default async function HomePage() {
                 />
               </div>
               <div className="p-5">
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">{article.category}</p>
-                <h2 className="mt-3 text-xl font-semibold leading-tight text-foreground transition group-hover:text-primary">
+                <h2 className="text-xl font-semibold leading-tight text-foreground transition group-hover:text-primary">
                   {article.title}
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{article.dek}</p>
-                <p className="mt-5 text-xs uppercase tracking-[0.2em] text-slate-500">
-                  {article.author} • {new Date(article.publishedAt).toLocaleDateString()}
+                <p className="mt-4 text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                  {new Date(article.publishedAt).toLocaleDateString()}
                 </p>
               </div>
             </a>
