@@ -4,6 +4,7 @@ import { ArrowUpRight, Clock, Play } from 'lucide-react'
 import { LiveUpdatesPanel } from '@/components/live-updates-panel'
 import { NewsletterForm } from '@/components/newsletter-form'
 import { SiteShell } from '@/components/site-shell'
+import { ArticleCard } from '@/components/article-card'
 import {
   type Article,
   type Category,
@@ -95,22 +96,24 @@ export default async function HomePage() {
   const externalPool = [...externalArticles]
   let externalIndex = 0
 
-  const secondFeature = articles[8] ?? externalPool[externalIndex++] ?? articles[0]
-  const featureTwo = articles[5] ?? externalPool[externalIndex++] ?? articles[0]
-  const sideStories = [...articles.slice(1, 5)]
+  const secondFeature = articles[1] ?? externalPool[externalIndex++] ?? articles[0]
+  const featureTwo = articles[2] ?? externalPool[externalIndex++] ?? articles[0]
+  const sideStories = [...articles.slice(3, 7)]
   while (sideStories.length < 4 && externalIndex < externalPool.length) {
     sideStories.push(externalPool[externalIndex++])
   }
 
-  const gridStories = [articles[1], articles[4], articles[6], articles[7]].filter(Boolean)
+  const gridStories = [...articles.slice(7, 11)]
   while (gridStories.length < 4 && externalIndex < externalPool.length) {
     gridStories.push(externalPool[externalIndex++])
   }
 
-  const resources = [...articles.slice(5, 8)]
+  const resources = [...articles.slice(11, 14)]
   while (resources.length < 3 && externalIndex < externalPool.length) {
     resources.push(externalPool[externalIndex++])
   }
+
+  const remainingStories = articles.slice(14)
 
   const trendingTopics = trendingArticles.length ? trendingArticles.map((article) => article.title) : articles.map((article) => article.title)
 
@@ -213,6 +216,22 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      {remainingStories.length > 0 && (
+        <section className="jox-container py-10">
+          <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-primary">Latest Stories</p>
+              <h2 className="mt-3 text-3xl font-semibold text-foreground">All published articles</h2>
+            </div>
+          </div>
+          <div className="grid gap-6 xl:grid-cols-3">
+            {remainingStories.map((article) => (
+              <ArticleCard key={article.externalUrl ?? article.slug} article={article} size="md" />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="border-y border-border bg-card">
         <div className="jox-container grid gap-8 py-12 lg:grid-cols-[0.45fr_1fr]">

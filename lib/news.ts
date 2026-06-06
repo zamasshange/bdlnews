@@ -78,6 +78,7 @@ function mapFlexibleArticle(row: Record<string, any>): Article {
     slug: readFirst(row, ['slug']) || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
     title,
     dek: readFirst(row, ['subtitle', 'dek', 'description', 'summary']),
+    content,
     category: toCategory(readFirst(row, ['category', 'category_name'])),
     image: readFirst(row, ['featured_image', 'image', 'image_url', 'urlToImage', 'thumbnail']) || '/placeholder.jpg',
     author: readFirst(row, ['author', 'author_name', 'source_name', 'source']) || 'BDL Newsroom',
@@ -97,12 +98,13 @@ export function mapArticle(row: ArticleRow): Article {
   const viewCount = Number(row.view_count ?? 0)
   const commentCount = Number(row.comment_count ?? 0)
   const shareCount = Number(row.share_count ?? 0)
+  const content = (row as Record<string, any>).content ?? (row as Record<string, any>).body ?? (row as Record<string, any>).article ?? ''
   return {
     id: row.id,
     slug: row.slug,
     title: row.headline,
-    dek: row.subtitle ?? row.seo_description ?? '',
-    content: row.content,
+    dek: row.subtitle ?? row.seo_description ?? (row as Record<string, any>).description ?? '',
+    content,
     category: toCategory(row.categories?.name),
     categorySlug: row.categories?.slug,
     image: row.featured_image ?? '/placeholder.jpg',
@@ -113,7 +115,7 @@ export function mapArticle(row: ArticleRow): Article {
     tags: row.seo_keywords ?? [],
     seoTitle: row.seo_title ?? undefined,
     seoDescription: row.seo_description ?? undefined,
-    readingTime: estimateReadingTime(row.content),
+    readingTime: estimateReadingTime(content),
     publishedAt: row.publish_date ?? row.created_at,
     region: 'Global',
     readers: viewCount,
