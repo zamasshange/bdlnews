@@ -7,7 +7,7 @@ import { getAdminCollections } from '@/lib/admin/data'
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const { articles, categories } = await getAdminCollections()
-  const article = articles.find((item: any) => item.id === id)
+  const article = articles.find((item: any) => String(item.id) === String(id))
   if (!article) notFound()
 
   return (

@@ -31,6 +31,7 @@ export function ArticleCard({
             alt={article.title}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
+            unoptimized={article.image?.startsWith('http')}
             className="story-image object-cover"
           />
           <span className="absolute left-3 top-3 bg-primary px-2.5 py-1 text-[10px] font-black uppercase text-black">

@@ -16,6 +16,7 @@ export function ArticleForm({
 }) {
   const formRef = useRef<HTMLFormElement>(null)
   const [articleId, setArticleId] = useState(article?.id ?? '')
+  const [categoryName, setCategoryName] = useState(article?.category ?? article?.categories?.name ?? '')
   const [autosaveState, setAutosaveState] = useState('Draft autosaves every 30 seconds')
   const [isPending, startTransition] = useTransition()
 
@@ -122,12 +123,18 @@ export function ArticleForm({
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <Field label="Category">
-          <select className={inputClass} name="category_id" defaultValue={article?.category_id ?? ''}>
+          <select
+            className={inputClass}
+            name="category_id"
+            defaultValue={article?.category_id ?? article?.category ?? ''}
+            onChange={(event) => setCategoryName(event.currentTarget.selectedOptions[0]?.textContent ?? '')}
+          >
             <option value="">Uncategorized</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>{category.name}</option>
             ))}
           </select>
+          <input type="hidden" name="category_name" value={categoryName} />
         </Field>
         <Field label="Status">
           <select className={inputClass} name="status" defaultValue={article?.status ?? 'draft'}>

@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { NAV_LINKS } from '@/lib/data'
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 
@@ -71,12 +72,15 @@ function normalizeAdminArticle(row: Record<string, any>) {
   const title = String(row.title ?? row.headline ?? row.name ?? '')
   return {
     ...row,
+    id: row.id != null ? String(row.id) : undefined,
     headline: title,
     title,
     slug: String(row.slug ?? title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')),
     subtitle: String(row.subtitle ?? row.dek ?? row.description ?? ''),
     content: String(row.content ?? row.body ?? ''),
     featured_image: String(row.featured_image ?? row.image ?? row.image_url ?? ''),
+    category: String(row.category ?? row.category_name ?? row.categories?.name ?? ''),
+    category_id: row.category_id ?? row.category_slug ?? row.category ?? null,
     seo_title: String(row.seo_title ?? title),
     seo_description: String(row.seo_description ?? row.description ?? row.subtitle ?? ''),
     seo_keywords: row.seo_keywords ?? row.tags ?? [],
@@ -155,10 +159,15 @@ export async function getAdminCollections() {
     safeQueryResponse(supabase.from('users').select('*').order('created_at', { ascending: false }).limit(100)),
   ])
 
+  const fallbackCategories = NAV_LINKS.filter((name) => name !== 'Home').map((name) => ({
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    name,
+  }))
+
   return {
     articles: table === 'articles' ? articles?.data ?? [] : (articles?.data ?? []).map(normalizeAdminArticle),
     authors: authors?.data ?? [],
-    categories: categories?.data ?? [],
+    categories: categories?.data?.length ? categories.data : fallbackCategories,
     comments: comments?.data ?? [],
     media: media?.data ?? [],
     liveUpdates: liveUpdates?.data ?? [],

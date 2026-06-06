@@ -22,6 +22,21 @@ export async function POST(request: Request) {
   const table = supabaseNewsTable
   const isArticlesTable = table === 'articles'
 
+  const fallbackPayload: Record<string, any> = {
+    title: headline,
+    content: String(body.content ?? ''),
+  }
+  const featuredImage = String(body.featured_image ?? '').trim()
+  if (featuredImage) fallbackPayload.featured_image = featuredImage
+  const categoryName = String(body.category_name ?? '').trim()
+  if (categoryName) fallbackPayload.category = categoryName
+  const seoTitle = String(body.seo_title ?? '').trim()
+  if (seoTitle) fallbackPayload.seo_title = seoTitle
+  const seoDescription = String(body.seo_description ?? '').trim()
+  if (seoDescription) fallbackPayload.seo_description = seoDescription
+  const publishDate = String(body.publish_date ?? '').trim()
+  if (publishDate) fallbackPayload.publish_date = publishDate
+
   const payload = isArticlesTable
     ? {
         headline,
@@ -41,10 +56,7 @@ export async function POST(request: Request) {
         updated_by: user.auth.id,
         updated_at: new Date().toISOString(),
       }
-    : {
-        title: headline,
-        content: String(body.content ?? ''),
-      }
+    : fallbackPayload
 
   const result = body.id
     ? await supabase.from(table).update(payload).eq('id', body.id).select('id').single()

@@ -76,6 +76,21 @@ export async function saveArticle(formData: FormData) {
     updated_at: new Date().toISOString(),
   }
 
+  const fallbackPayload: Record<string, any> = {
+    title: headline,
+    content: String(formData.get('content') ?? ''),
+  }
+  const fallbackFeaturedImage = String(formData.get('featured_image') ?? '').trim()
+  if (fallbackFeaturedImage) fallbackPayload.featured_image = fallbackFeaturedImage
+  const fallbackCategoryName = String(formData.get('category_name') ?? '').trim()
+  if (fallbackCategoryName) fallbackPayload.category = fallbackCategoryName
+  const fallbackSeoTitle = String(formData.get('seo_title') ?? '').trim()
+  if (fallbackSeoTitle) fallbackPayload.seo_title = fallbackSeoTitle
+  const fallbackSeoDescription = String(formData.get('seo_description') ?? '').trim()
+  if (fallbackSeoDescription) fallbackPayload.seo_description = fallbackSeoDescription
+  const fallbackPublishDate = String(formData.get('publish_date') ?? '').trim()
+  if (fallbackPublishDate) fallbackPayload.publish_date = fallbackPublishDate
+
   const payload: Record<string, any> = isLegacyArticlesTable
     ? {
         ...basePayload,
@@ -86,10 +101,7 @@ export async function saveArticle(formData: FormData) {
         seo_keywords: keywords,
         status,
       }
-    : {
-        title: headline,
-        content: String(formData.get('content') ?? ''),
-      }
+    : fallbackPayload
 
   if (user.profileExists && isLegacyArticlesTable) {
     payload.updated_by = user.auth.id

@@ -98,10 +98,11 @@ export default async function ArticlePage({
         <section className="jox-container">
           <div className="relative aspect-[16/9] overflow-hidden bg-muted">
             <Image
-              src={article.image}
+              src={article.image || '/placeholder.jpg'}
               alt={article.title}
               fill
               priority
+              unoptimized={article.image?.startsWith('http')}
               sizes="(max-width: 1280px) 100vw, 1280px"
               className="object-cover"
             />
