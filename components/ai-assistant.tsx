@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Sparkles, X, ArrowUp, Bot } from 'lucide-react'
+import { Sparkles, X, ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Logo } from '@/components/logo'
 
 interface Msg {
   role: 'user' | 'assistant'
@@ -81,9 +82,7 @@ export function AiAssistant() {
           >
             <div className="flex items-center justify-between border-b border-border bg-primary/5 px-4 py-3">
               <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <Bot className="size-4" />
-                </span>
+                <Logo className="h-10 w-10" />
                 <div className="leading-tight">
                   <p className="text-sm font-semibold">Sonke</p>
                   <p className="flex items-center gap-1 text-[11px] text-muted-foreground">

@@ -125,9 +125,18 @@ export default async function ArticlePage({
           </aside>
 
           <div className="space-y-6 text-lg leading-8 text-foreground">
-            {(article.content ?? '').split(/\n{2,}/).filter(Boolean).map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
+            {(article.content ?? '').trim() ? (
+              (article.content ?? '').split(/\n{2,}/).filter(Boolean).map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))
+            ) : (
+              <div className="rounded-3xl border border-border bg-card p-6">
+                <p className="text-lg font-semibold text-foreground">This story is curated for you.</p>
+                <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                  Sonke can summarize this headline, explain the context, or help you filter the latest news into what matters most. Tap the assistant at the bottom-right to get the quick version.
+                </p>
+              </div>
+            )}
           </div>
 
           <aside className="h-fit border border-border bg-background p-5">
