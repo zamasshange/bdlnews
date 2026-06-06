@@ -1,8 +1,8 @@
 import 'server-only'
 
-const apiKey = process.env.NVIDIA_API_KEY ?? process.env.NEXT_PUBLIC_NVIDIA_API_KEY ?? ''
-const model = process.env.NVIDIA_MODEL ?? 'nvidia/nemotron-3-super-120b-a12b:free'
-const apiUrl = process.env.NVIDIA_API_URL ?? `https://api.nvidia.com/v1/models/${encodeURIComponent(model)}:generate`
+const apiKey = process.env.OPENROUTER_API_KEY ?? process.env.NVIDIA_API_KEY ?? process.env.NEXT_PUBLIC_NVIDIA_API_KEY ?? ''
+const model = process.env.OPENROUTER_MODEL ?? process.env.NVIDIA_MODEL ?? 'gpt-4o-mini'
+const apiUrl = process.env.OPENROUTER_API_URL ?? 'https://openrouter.ai/v1/chat/completions'
 
 function safeText(value: unknown) {
   return typeof value === 'string' ? value : ''
@@ -33,7 +33,7 @@ function parseNvidiaResult(payload: any): string {
 
 export async function generateSonkeReply(message: string, context?: string) {
   if (!apiKey) {
-    throw new Error('NVIDIA_API_KEY is not configured')
+    throw new Error('OPENROUTER_API_KEY is not configured')
   }
 
   const systemPrompt = [
@@ -55,8 +55,12 @@ export async function generateSonkeReply(message: string, context?: string) {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      input: prompt,
-      max_output_tokens: 512,
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message },
+      ],
+      max_tokens: 512,
       temperature: 0.3,
     }),
   })
