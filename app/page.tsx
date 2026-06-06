@@ -118,52 +118,54 @@ export default async function HomePage() {
     <SiteShell showTicker>
       <section className="jox-container py-10 md:py-14">
         <div className="grid gap-9 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.48fr)]">
-          <article className="story-link group">
-            <Link href={`/article/${featured.slug}`} className="block">
-              <div className="relative aspect-[1.6] overflow-hidden bg-muted">
-                <Image
-                  src={featured.image}
-                  alt={featured.title}
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 66vw"
-                  className="story-image object-cover object-center"
-                />
-              </div>
-              <h1 className="mt-8 max-w-5xl text-4xl font-medium leading-[1.08] text-foreground transition group-hover:text-primary md:text-5xl">
-                {featured.title}
-              </h1>
-            </Link>
-            <StoryMeta
-              category={featured.category}
-              readingTime={featured.readingTime}
-              className="mt-5"
-            />
-          </article>
-          <article className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-            <NewsLink article={secondFeature} className="group block">
-              <div className="relative aspect-[1.3] overflow-hidden bg-muted">
-                <Image
-                  src={secondFeature.image}
-                  alt={secondFeature.title}
-                  fill
-                  className="object-cover"
-                  unoptimized={secondFeature.image?.startsWith('http')}
-                />
-              </div>
-              <div className="p-5">
-                <p className="text-xs uppercase tracking-[0.3em] text-primary">{secondFeature.category}</p>
-                <h2 className="mt-3 text-xl font-semibold leading-tight text-foreground transition group-hover:text-primary">
+          <div className="grid gap-9">
+            <article className="story-link group">
+              <Link href={`/article/${featured.slug}`} className="block">
+                <div className="relative aspect-[1.6] overflow-hidden bg-muted">
+                  <Image
+                    src={featured.image}
+                    alt={featured.title}
+                    fill
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 66vw"
+                    className="story-image object-cover object-center"
+                  />
+                </div>
+                <h1 className="mt-8 max-w-5xl text-4xl font-medium leading-[1.08] text-foreground transition group-hover:text-primary md:text-5xl">
+                  {featured.title}
+                </h1>
+              </Link>
+              <StoryMeta
+                category={featured.category}
+                readingTime={featured.readingTime}
+                className="mt-5"
+              />
+            </article>
+
+            <article className="story-link group">
+              <NewsLink article={secondFeature} className="block">
+                <div className="relative aspect-[1.6] overflow-hidden bg-muted">
+                  <Image
+                    src={secondFeature.image}
+                    alt={secondFeature.title}
+                    fill
+                    className="story-image object-cover object-center"
+                    unoptimized={secondFeature.image?.startsWith('http')}
+                  />
+                </div>
+                <h2 className="mt-8 max-w-5xl text-4xl font-medium leading-[1.08] text-foreground transition group-hover:text-primary md:text-5xl">
                   {secondFeature.title}
                 </h2>
-                <p className="mt-3 text-xs uppercase tracking-[0.24em] text-muted-foreground">
-                  {secondFeature.readingTime} Min • {new Date(secondFeature.publishedAt).toLocaleDateString()}
-                </p>
-              </div>
-            </NewsLink>
-          </article>
+              </NewsLink>
+              <StoryMeta
+                category={secondFeature.category}
+                readingTime={secondFeature.readingTime}
+                className="mt-5"
+              />
+            </article>
+          </div>
 
-          <aside className="grid content-start">
+          <aside className="grid content-start gap-6">
             {sideStories.map((article) => (
               <SideRailStory key={article.externalUrl ?? article.slug} article={article} />
             ))}

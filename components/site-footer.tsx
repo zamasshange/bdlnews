@@ -73,7 +73,7 @@ export function SiteFooter() {
             <div>
               <p className="mb-2 text-xs font-black uppercase text-primary">Contact Us</p>
               <p>burdolar@gmail.com</p>
-              <p>+1 (406) 555-0120</p>
+              <p>+27736701175</p>
             </div>
           </div>
         </div>
