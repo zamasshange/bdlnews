@@ -13,6 +13,37 @@ export type Category =
 
 export type Status = 'LIVE' | 'UPDATED' | 'BREAKING'
 
+export interface AuthorProfile {
+  id: string
+  name: string
+  role: string
+  expertise: string[]
+  bio: string
+  profileImage: string
+  socialLinks: { x?: string; linkedin?: string; website?: string }
+  articles: number
+  views: number
+  comments: number
+}
+
+export interface PodcastEpisode {
+  id: string
+  title: string
+  description: string
+  host: string
+  duration: string
+  publishedAt: string
+  category: string
+  image: string
+  notes: string
+  audioUrl: string
+}
+
+export interface SiteLink {
+  label: string
+  href: string
+}
+
 export interface Article {
   id?: string
   slug: string
@@ -55,6 +86,90 @@ export const NAV_LINKS = [
   'Opinion',
   'AI News',
 ] as const
+
+export const SITE_LINKS: SiteLink[] = [
+  { label: 'About Us', href: '/about-us' },
+  { label: 'News', href: '/news' },
+  { label: 'Authors', href: '/authors' },
+  { label: 'Podcast', href: '/podcast' },
+  { label: 'Contact Us', href: '/contact-us' },
+]
+
+export const sampleAuthors: AuthorProfile[] = [
+  {
+    id: 'zama-shange',
+    name: 'Zama Shange',
+    role: 'Founder & Editor-in-Chief',
+    expertise: ['Technology', 'Media', 'Product Design', 'African Entrepreneurship'],
+    bio: 'Zama leads BDL News with a vision for AI-powered storytelling, digital product innovation, and entrepreneurial journalism across Africa.',
+    profileImage: '/images/authors/zama-shange.jpg',
+    socialLinks: {
+      x: 'https://x.com/zamashange',
+      linkedin: 'https://www.linkedin.com/in/zama-shange',
+      website: 'https://bdlcorp.africa',
+    },
+    articles: 128,
+    views: 860000,
+    comments: 4200,
+  },
+  {
+    id: 'amara-okonkwo',
+    name: 'Amara Okonkwo',
+    role: 'Global Affairs Correspondent',
+    expertise: ['Geopolitics', 'Climate Policy', 'African Diplomacy'],
+    bio: 'Amara covers international affairs with deep context, making complex treaties and global summits easy to understand.',
+    profileImage: '/images/authors/amara-okonkwo.jpg',
+    socialLinks: {
+      x: 'https://x.com/amaraokonkwo',
+      linkedin: 'https://www.linkedin.com/in/amaraokonkwo',
+    },
+    articles: 84,
+    views: 520000,
+    comments: 1800,
+  },
+  {
+    id: 'kwame-mensah',
+    name: 'Kwame Mensah',
+    role: 'Africa Bureau Chief',
+    expertise: ['Infrastructure', 'Development', 'Trade'],
+    bio: 'Kwame brings stories from across Africa, focusing on innovation, economic change, and the people shaping regional growth.',
+    profileImage: '/images/authors/kwame-mensah.jpg',
+    socialLinks: {
+      x: 'https://x.com/kwamemensah',
+      linkedin: 'https://www.linkedin.com/in/kwamemensah',
+    },
+    articles: 97,
+    views: 610000,
+    comments: 2350,
+  },
+]
+
+export const podcastEpisodes: PodcastEpisode[] = [
+  {
+    id: 'bdl-conversations-001',
+    title: 'AI, Africa and the Future of Trusted Media',
+    description: 'A wide-ranging conversation about how AI is reshaping journalism, entrepreneurship, and audience trust across Africa.',
+    host: 'Zama Shange',
+    duration: '42:11',
+    publishedAt: '2026-05-27',
+    category: 'Technology',
+    image: '/images/podcast/episode-1.jpg',
+    notes: 'Discussing the role of AI in reporting, content personalization, and public trust for emerging markets.',
+    audioUrl: 'https://example.com/podcast/episode-1.mp3',
+  },
+  {
+    id: 'bdl-conversations-002',
+    title: 'Building a Modern Newsroom for Africa',
+    description: 'Founders and newsroom leaders share how they use technology, editorial standards, and community feedback to build better local journalism.',
+    host: 'Zama Shange',
+    duration: '38:25',
+    publishedAt: '2026-06-02',
+    category: 'Media',
+    image: '/images/podcast/episode-2.jpg',
+    notes: 'A closer look at newsroom structure, editorial standards, and audience-first storytelling.',
+    audioUrl: 'https://example.com/podcast/episode-2.mp3',
+  },
+]
 
 export const articles: Article[] = [
   {

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Logo } from '@/components/logo'
-import { NAV_LINKS, articles } from '@/lib/data'
+import { NAV_LINKS, SITE_LINKS, articles } from '@/lib/data'
 
 export function SiteFooter() {
   return (
@@ -57,15 +57,9 @@ export function SiteFooter() {
             <div>
               <p className="mb-2 text-xs font-black uppercase text-primary">Pages</p>
               <div className="grid gap-2">
-                {[
-                  ['About Us', '/about-us'],
-                  ['News', '/news'],
-                  ['Authors', '/authors'],
-                  ['Podcast', '/podcast'],
-                  ['Contact Us', '/contact-us'],
-                ].map(([label, href]) => (
-                  <Link key={label} href={href} className="transition hover:text-foreground">
-                    {label}
+                {SITE_LINKS.map((link) => (
+                  <Link key={link.href} href={link.href} className="transition hover:text-foreground">
+                    {link.label}
                   </Link>
                 ))}
               </div>

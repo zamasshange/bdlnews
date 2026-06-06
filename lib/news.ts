@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { type Article, type Category, type LiveItem, NAV_LINKS } from '@/lib/data'
+import { type Article, type AuthorProfile, type Category, type LiveItem, NAV_LINKS, sampleAuthors, podcastEpisodes } from '@/lib/data'
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { fetchExternalNews, type ExternalNewsItem } from '@/lib/external-news'
@@ -276,6 +276,51 @@ export async function getAuthorProfile(id: string) {
       comments: stories.reduce((sum, article) => sum + (article.comments ?? 0), 0),
     },
   }
+}
+
+export async function getAuthorDirectory(): Promise<AuthorProfile[]> {
+  if (!hasSupabaseAdminConfig()) return sampleAuthors
+  if (supabaseNewsTable !== 'articles') return sampleAuthors
+
+  const supabase = createSupabaseAdminClient()
+  const { data: authors, error } = await supabase.from('authors').select('*')
+  if (error || !authors?.length) return sampleAuthors
+
+  const articlesResult = await supabase.from('articles').select('id, author_id, view_count, comment_count')
+  const articleRows = articlesResult.data ?? []
+  const authorStats = authors.reduce<Record<string, { articles: number; views: number; comments: number }>>((acc, author) => {
+    acc[author.id] = { articles: 0, views: 0, comments: 0 }
+    return acc
+  }, {})
+
+  for (const row of articleRows) {
+    const authorId = String((row as any).author_id ?? '')
+    if (!authorStats[authorId]) continue
+    authorStats[authorId].articles += 1
+    authorStats[authorId].views += Number((row as any).view_count ?? 0)
+    authorStats[authorId].comments += Number((row as any).comment_count ?? 0)
+  }
+
+  return authors.map((author) => ({
+    id: author.id,
+    name: author.name,
+    role: author.role ?? 'Author',
+    expertise: typeof author.expertise === 'string' ? author.expertise.split(',').map((item) => item.trim()).filter(Boolean) : Array.isArray(author.expertise) ? author.expertise : [],
+    bio: author.bio ?? '',
+    profileImage: author.profile_image ?? '/placeholder.jpg',
+    socialLinks: {
+      x: author.social_links?.x ?? '',
+      linkedin: author.social_links?.linkedin ?? '',
+      website: author.social_links?.website ?? '',
+    },
+    articles: authorStats[author.id]?.articles ?? 0,
+    views: authorStats[author.id]?.views ?? 0,
+    comments: authorStats[author.id]?.comments ?? 0,
+  }))
+}
+
+export function getPodcastEpisodes() {
+  return podcastEpisodes
 }
 
 export async function getBreakingTickerItems() {

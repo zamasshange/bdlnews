@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowUpRight, Bot, Clock, Sparkles } from 'lucide-react'
 import { ArticleCard } from '@/components/article-card'
+import { ArticleAiTools } from '@/components/article-ai-tools'
 import { Comments } from '@/components/comments'
 import { SiteShell } from '@/components/site-shell'
 import { ArticleViewTracker } from '@/components/tracking/article-view-tracker'
@@ -38,10 +39,136 @@ export default async function ArticlePage({
   const [article, articles] = await Promise.all([getArticleBySlug(slug), getPublishedArticles()])
   if (!article) notFound()
 
+  const contentBlocks = (() => {
+    try {
+      const parsed = JSON.parse(article.content ?? '')
+      return Array.isArray(parsed) ? parsed : null
+    } catch {
+      return null
+    }
+  })()
+
   const related = articles
     .filter((item) => item.slug !== article.slug && item.category === article.category)
     .concat(articles.filter((item) => item.slug !== article.slug && item.category !== article.category))
     .slice(0, 3)
+
+  const articleContext = JSON.stringify({
+    title: article.title,
+    subtitle: article.dek,
+    category: article.category,
+    author: article.author,
+    content: article.content,
+  })
+
+  const renderBlock = (block: any, index: number) => {
+    switch (block.type) {
+      case 'heading':
+        return (
+          <h2 key={index} className="text-3xl font-semibold leading-tight text-foreground md:text-4xl">
+            {block.text}
+          </h2>
+        )
+      case 'subheading':
+        return (
+          <h3 key={index} className="text-2xl font-semibold leading-tight text-foreground md:text-3xl">
+            {block.text}
+          </h3>
+        )
+      case 'quote':
+        return (
+          <blockquote key={index} className="rounded-3xl border-l-4 border-primary bg-muted px-6 py-5 text-xl italic leading-8 text-foreground">
+            {block.text}
+          </blockquote>
+        )
+      case 'pull_quote':
+        return (
+          <div key={index} className="rounded-3xl border border-border bg-card p-6 text-lg font-semibold text-foreground">
+            {block.text}
+          </div>
+        )
+      case 'image':
+        return (
+          <figure key={index} className="overflow-hidden rounded-[2rem] bg-muted shadow-sm">
+            <img src={block.url || '/placeholder.jpg'} alt={block.alt || article.title} className="w-full object-cover" />
+            {block.caption && <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">{block.caption}</figcaption>}
+          </figure>
+        )
+      case 'image_gallery':
+        return (
+          <div key={index} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {(block.items ?? []).map((src: string, itemIndex: number) => (
+              <div key={itemIndex} className="overflow-hidden rounded-3xl bg-muted">
+                <img src={src || '/placeholder.jpg'} alt={`${article.title} image ${itemIndex + 1}`} className="h-full w-full object-cover" />
+              </div>
+            ))}
+          </div>
+        )
+      case 'video':
+        return block.url ? (
+          <div key={index} className="overflow-hidden rounded-[2rem] bg-black">
+            <iframe
+              src={block.url}
+              title={block.caption || 'Embedded video'}
+              className="h-80 w-full"
+              allow="autoplay; encrypted-media; picture-in-picture"
+            />
+          </div>
+        ) : null
+      case 'fact_box':
+        return (
+          <div key={index} className="rounded-3xl border border-border bg-card p-6">
+            <p className="text-sm uppercase tracking-[0.3em] text-primary">Fact Box</p>
+            <p className="mt-3 text-base text-foreground">{block.text}</p>
+          </div>
+        )
+      case 'timeline':
+        return (
+          <div key={index} className="space-y-3 rounded-3xl border border-border bg-muted p-6">
+            <p className="text-sm uppercase tracking-[0.3em] text-primary">Timeline</p>
+            {Array.isArray(block.items)
+              ? block.items.map((item: string, itemIndex: number) => (
+                  <div key={itemIndex} className="rounded-2xl bg-background p-4 text-sm text-foreground">
+                    {item}
+                  </div>
+                ))
+              : null}
+          </div>
+        )
+      case 'statistics':
+        return (
+          <div key={index} className="grid gap-4 sm:grid-cols-2">
+            {Array.isArray(block.items)
+              ? block.items.map((stat: any, statIndex: number) => (
+                  <div key={statIndex} className="rounded-3xl border border-border bg-card p-5 text-sm text-foreground">
+                    <p className="font-black text-2xl">{stat.value}</p>
+                    <p className="mt-2 text-muted-foreground">{stat.label}</p>
+                  </div>
+                ))
+              : null}
+          </div>
+        )
+      case 'ai_summary':
+        return (
+          <div key={index} className="rounded-3xl border border-primary/40 bg-primary/5 p-6 text-sm leading-7 text-foreground">
+            <p className="font-semibold text-foreground">AI Summary</p>
+            <p className="mt-3">{block.text}</p>
+          </div>
+        )
+      case 'custom_html':
+        return (
+          <div key={index} className="prose rounded-3xl border border-border bg-muted p-6 text-foreground">
+            <div dangerouslySetInnerHTML={{ __html: block.html ?? '' }} />
+          </div>
+        )
+      default:
+        return (
+          <p key={index} className="text-lg leading-8 text-foreground">
+            {block.text}
+          </p>
+        )
+    }
+  }
 
   return (
     <SiteShell showTicker>
@@ -94,6 +221,11 @@ export default async function ArticlePage({
             </aside>
           </div>
         </header>
+
+        <section className="jox-container pb-10">
+          <div id="article-context" data-context={articleContext} className="hidden" />
+          <ArticleAiTools article={article} />
+        </section>
 
         <section className="jox-container space-y-6 pb-10">
           <div className="overflow-hidden rounded-[2rem] bg-muted shadow-2xl shadow-black/5">
@@ -167,7 +299,9 @@ export default async function ArticlePage({
           </aside>
 
           <div className="space-y-8 text-lg leading-8 text-foreground">
-            {(article.content ?? '').trim() ? (
+            {contentBlocks ? (
+              contentBlocks.map((block, index) => renderBlock(block, index))
+            ) : (article.content ?? '').trim() ? (
               (article.content ?? '').split(/\n{2,}/).filter(Boolean).map((paragraph, index) => (
                 <p key={index}>{paragraph}</p>
               ))

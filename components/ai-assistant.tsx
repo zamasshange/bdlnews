@@ -28,7 +28,27 @@ export function AiAssistant() {
     },
   ])
   const [isLoading, setIsLoading] = useState(false)
+  const [context, setContext] = useState<string | undefined>()
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const contextElement = document.getElementById('article-context')
+    if (contextElement) {
+      setContext(contextElement.dataset.context)
+    }
+
+    const onSonkeAsk = (event: Event) => {
+      const detail = event instanceof CustomEvent ? event.detail : undefined
+      const message = detail?.message ? String(detail.message) : ''
+      setOpen(true)
+      if (message) {
+        send(message)
+      }
+    }
+
+    window.addEventListener('sonke:ask', onSonkeAsk)
+    return () => window.removeEventListener('sonke:ask', onSonkeAsk)
+  }, [])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -44,7 +64,7 @@ export function AiAssistant() {
       const response = await fetch('/api/sonke', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, context }),
       })
 
       const payload = await response.json()
@@ -122,10 +142,7 @@ export function AiAssistant() {
 
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}
-                >
+                <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
                   <div
                     className={cn(
                       'max-w-[85%] text-pretty rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed',
