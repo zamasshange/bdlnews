@@ -62,11 +62,18 @@ export async function generateSonkeReply(message: string, context?: string) {
   })
 
   if (!response.ok) {
-    const text = await response.text()
-    throw new Error(`NVIDIA request failed: ${response.status} ${text}`)
+    const bodyText = await response.text().catch(() => '')
+    const message = bodyText ? `NVIDIA request failed: ${response.status} ${bodyText}` : `NVIDIA request failed: ${response.status}`
+    throw new Error(message)
   }
 
-  const payload = await response.json()
+  let payload: any
+  try {
+    payload = await response.json()
+  } catch {
+    throw new Error('NVIDIA returned a non-JSON response')
+  }
+
   const text = parseNvidiaResult(payload)
   return text || 'Sonke could not generate a response right now.'
 }

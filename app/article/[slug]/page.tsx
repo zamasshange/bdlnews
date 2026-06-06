@@ -97,7 +97,7 @@ export default async function ArticlePage({
 
         <section className="jox-container space-y-6 pb-10">
           <div className="overflow-hidden rounded-[2rem] bg-muted shadow-2xl shadow-black/5">
-            <div className="relative aspect-[16/9] sm:aspect-[3/1]">
+            <div className="relative aspect-square sm:aspect-[4/3]">
               <Image
                 src={article.image || '/placeholder.jpg'}
                 alt={article.title}
