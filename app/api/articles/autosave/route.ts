@@ -11,12 +11,6 @@ function list(value: unknown) {
   return String(value ?? '').split(',').map((item) => item.trim()).filter(Boolean)
 }
 
-async function resolveAuthorName(supabase: ReturnType<typeof createSupabaseAdminClient>, authorId: string | null) {
-  if (!authorId) return 'BDL Newsroom'
-  const { data, error } = await supabase.from('authors').select('name').eq('id', authorId).maybeSingle()
-  return !error && data?.name ? String(data.name) : 'BDL Newsroom'
-}
-
 export async function POST(request: Request) {
   const user = await requireAdminUser()
   if (!hasSupabaseAdminConfig()) return NextResponse.json({ error: 'Supabase is not configured' }, { status: 503 })
@@ -27,7 +21,6 @@ export async function POST(request: Request) {
   const supabase = createSupabaseAdminClient()
   const table = supabaseNewsTable
   const isArticlesTable = table === 'articles'
-  const authorName = await resolveAuthorName(supabase, String(body.author_id ?? '').trim() || null)
 
   const payload = isArticlesTable
     ? {
@@ -51,7 +44,6 @@ export async function POST(request: Request) {
     : {
         title: headline,
         content: String(body.content ?? ''),
-        author: authorName,
       }
 
   const result = body.id

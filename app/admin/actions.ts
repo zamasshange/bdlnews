@@ -35,12 +35,6 @@ async function syncArticleTags(supabase: ReturnType<typeof createSupabaseAdminCl
   }
 }
 
-async function resolveAuthorName(supabase: ReturnType<typeof createSupabaseAdminClient>, authorId: string | null) {
-  if (!authorId) return 'BDL Newsroom'
-  const { data, error } = await supabase.from('authors').select('name').eq('id', authorId).maybeSingle()
-  return !error && data?.name ? String(data.name) : 'BDL Newsroom'
-}
-
 async function requireConfigured() {
   await requireAdminUser()
   if (!hasSupabaseAdminConfig()) {
@@ -69,8 +63,6 @@ export async function saveArticle(formData: FormData) {
   const publishDate = String(formData.get('publish_date') || '')
   const keywords = list(formData.get('seo_keywords'))
   const tagNames = list(formData.get('tags')).length ? list(formData.get('tags')) : keywords
-  const authorId = String(formData.get('author_id') ?? '').trim() || null
-  const authorName = await resolveAuthorName(supabase, authorId)
 
   const basePayload: Record<string, any> = {
     headline,
@@ -89,7 +81,7 @@ export async function saveArticle(formData: FormData) {
         ...basePayload,
         gallery_images: list(formData.get('gallery_images')),
         video_url: String(formData.get('video_url') ?? ''),
-        author_id: authorId || null,
+        author_id: String(formData.get('author_id') ?? '') || null,
         category_id: String(formData.get('category_id') ?? '') || null,
         seo_keywords: keywords,
         status,
@@ -97,7 +89,6 @@ export async function saveArticle(formData: FormData) {
     : {
         title: headline,
         content: String(formData.get('content') ?? ''),
-        author: authorName,
       }
 
   if (user.profileExists && isLegacyArticlesTable) {

@@ -4,11 +4,11 @@ import { AdminPageHeader } from '@/components/admin/ui'
 import { getAdminCollections } from '@/lib/admin/data'
 
 export default async function CreateArticlePage() {
-  const { authors, categories } = await getAdminCollections()
+  const { categories } = await getAdminCollections()
   return (
     <ProtectedAdminPage>
       <AdminPageHeader title="Create Article" description="Compose a story and choose whether it stays draft, goes to review, schedules, publishes, or breaks live." />
-      <ArticleForm authors={authors} categories={categories} />
+      <ArticleForm categories={categories} />
     </ProtectedAdminPage>
   )
 }

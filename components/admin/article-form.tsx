@@ -9,11 +9,9 @@ const statuses = ['draft', 'review', 'scheduled', 'published', 'archived', 'brea
 
 export function ArticleForm({
   article,
-  authors,
   categories,
 }: {
   article?: Record<string, any> | null
-  authors: Record<string, any>[]
   categories: Record<string, any>[]
 }) {
   const formRef = useRef<HTMLFormElement>(null)
@@ -123,14 +121,6 @@ export function ArticleForm({
         <Button type="button" variant="outline" size="sm" onClick={() => runAi('generate_tags')}>Generate Tags</Button>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        <Field label="Author">
-          <select className={inputClass} name="author_id" defaultValue={article?.author_id ?? ''}>
-            <option value="">BDL Newsroom</option>
-            {authors.map((author) => (
-              <option key={author.id} value={author.id}>{author.name}</option>
-            ))}
-          </select>
-        </Field>
         <Field label="Category">
           <select className={inputClass} name="category_id" defaultValue={article?.category_id ?? ''}>
             <option value="">Uncategorized</option>
