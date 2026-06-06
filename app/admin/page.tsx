@@ -19,8 +19,12 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="hidden h-20 w-32 items-center justify-center rounded-3xl bg-slate-100 p-3 md:flex">
+          <div className="flex h-20 w-32 items-center justify-center rounded-3xl bg-slate-100 p-3 shadow-inner">
             <Logo className="h-full w-full object-contain" />
+          </div>
+          <div className="hidden flex-col text-right md:flex">
+            <p className="text-sm font-black uppercase tracking-[0.3em] text-primary">BDL</p>
+            <p className="text-sm text-slate-500">Editorial dashboard</p>
           </div>
           <a
             href="/admin/articles/create"

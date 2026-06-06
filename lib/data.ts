@@ -19,6 +19,8 @@ export interface Article {
   title: string
   dek: string
   content?: string
+  gallery?: string[]
+  imageCredit?: string
   category: Category
   categorySlug?: string
   image: string

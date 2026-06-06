@@ -46,11 +46,26 @@ export function AiAssistant() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
       })
+
       const payload = await response.json()
       const reply = payload.text || payload.error || 'Sonke could not answer that right now.'
-      setMessages((m) => [...m, { role: 'assistant', text: reply }])
-    } catch {
-      setMessages((m) => [...m, { role: 'assistant', text: 'Something went wrong while connecting to Sonke. Please try again.' }])
+      const errorDetail = !response.ok ? ` (${payload.error || response.statusText})` : ''
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'assistant',
+          text: response.ok ? reply : `Sonke returned an error. Please try again later.${errorDetail}`,
+        },
+      ])
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'network error'
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'assistant',
+          text: `Something went wrong while connecting to Sonke. ${detail}. Please try again.`,
+        },
+      ])
     } finally {
       setIsLoading(false)
     }

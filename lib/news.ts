@@ -66,9 +66,17 @@ function readFirst(row: Record<string, any>, keys: string[]) {
   return ''
 }
 
+function parseStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === 'string' && item.trim())
+  if (typeof value === 'string') return value.split(',').map((item) => item.trim()).filter(Boolean)
+  return []
+}
+
 function mapFlexibleArticle(row: Record<string, any>): Article {
   const title = readFirst(row, ['headline', 'title', 'name'])
   const content = readFirst(row, ['content', 'body', 'article', 'full_content', 'description'])
+  const imageCredit = readFirst(row, ['image_credit', 'photo_credit', 'credit'])
+  const gallery = parseStringArray(row.gallery_images ?? row.images ?? row.gallery)
   const publishedAt =
     readFirst(row, ['publish_date', 'published_at', 'pubDate', 'pub_date', 'created_at', 'date']) ||
     new Date().toISOString()
@@ -79,6 +87,8 @@ function mapFlexibleArticle(row: Record<string, any>): Article {
     title,
     dek: readFirst(row, ['subtitle', 'dek', 'description', 'summary']),
     content,
+    gallery,
+    imageCredit,
     category: toCategory(readFirst(row, ['category', 'category_name'])),
     image: readFirst(row, ['featured_image', 'image', 'image_url', 'urlToImage', 'thumbnail']) || '/placeholder.jpg',
     author: readFirst(row, ['author', 'author_name', 'source_name', 'source']) || 'BDL Newsroom',
@@ -99,12 +109,16 @@ export function mapArticle(row: ArticleRow): Article {
   const commentCount = Number(row.comment_count ?? 0)
   const shareCount = Number(row.share_count ?? 0)
   const content = (row as Record<string, any>).content ?? (row as Record<string, any>).body ?? (row as Record<string, any>).article ?? ''
+  const gallery = parseStringArray((row as Record<string, any>).gallery_images ?? (row as Record<string, any>).gallery)
+  const imageCredit = (row as Record<string, any>).image_credit ?? (row as Record<string, any>).photo_credit ?? ''
   return {
     id: row.id,
     slug: row.slug,
     title: row.headline,
     dek: row.subtitle ?? row.seo_description ?? (row as Record<string, any>).description ?? '',
     content,
+    gallery,
+    imageCredit,
     category: toCategory(row.categories?.name),
     categorySlug: row.categories?.slug,
     image: row.featured_image ?? '/placeholder.jpg',

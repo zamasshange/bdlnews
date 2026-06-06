@@ -95,42 +95,84 @@ export default async function ArticlePage({
           </div>
         </header>
 
-        <section className="jox-container">
-          <div className="relative aspect-[16/9] overflow-hidden bg-muted">
-            <Image
-              src={article.image || '/placeholder.jpg'}
-              alt={article.title}
-              fill
-              priority
-              unoptimized={article.image?.startsWith('http')}
-              sizes="(max-width: 1280px) 100vw, 1280px"
-              className="object-cover"
-            />
+        <section className="jox-container space-y-6 pb-10">
+          <div className="overflow-hidden rounded-[2rem] bg-muted shadow-2xl shadow-black/5">
+            <div className="relative aspect-[16/9] sm:aspect-[3/1]">
+              <Image
+                src={article.image || '/placeholder.jpg'}
+                alt={article.title}
+                fill
+                priority
+                unoptimized={article.image?.startsWith('http')}
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                className="object-cover transition duration-700 ease-out hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute left-6 bottom-6 rounded-3xl border border-white/15 bg-black/60 p-4 text-white shadow-xl shadow-black/20">
+                <p className="text-xs uppercase tracking-[0.32em] text-white/70">{article.category}</p>
+                <p className="mt-2 text-sm text-white/80">{article.region}</p>
+                <p className="mt-3 text-sm leading-relaxed text-white/75">
+                  {article.imageCredit ? `Image credit: ${article.imageCredit}` : 'Visual dispatch from the BDL newsroom.'}
+                </p>
+              </div>
+            </div>
           </div>
+
+          {article.gallery?.length ? (
+            <div className="grid gap-4 sm:grid-cols-3">
+              {article.gallery.slice(0, 3).map((src, index) => (
+                <div key={`${src}-${index}`} className="overflow-hidden rounded-3xl bg-muted shadow-sm shadow-black/5">
+                  <Image
+                    src={src || '/placeholder.jpg'}
+                    alt={`${article.title} image ${index + 1}`}
+                    width={640}
+                    height={480}
+                    className="h-full w-full object-cover transition duration-500 hover:scale-105"
+                    unoptimized={src?.startsWith('http')}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null}
         </section>
 
         <section className="jox-container grid gap-10 py-10 lg:grid-cols-[0.22fr_0.56fr_0.22fr]">
-          <aside className="text-xs uppercase text-muted-foreground">
+          <aside className="space-y-6 text-xs uppercase text-muted-foreground lg:sticky lg:top-[5.75rem]">
             {article.authorId ? (
-              <Link href={`/author/${article.authorId}`} className="font-black text-foreground transition hover:text-primary">{article.author}</Link>
+              <Link href={`/author/${article.authorId}`} className="font-black text-foreground transition hover:text-primary">
+                {article.author}
+              </Link>
             ) : (
               <p className="font-black text-foreground">{article.author}</p>
             )}
-            <p>{article.authorRole}</p>
-            <p className="mt-4 flex items-center gap-2">
+            <p className="text-sm text-foreground">{article.authorRole}</p>
+            <p className="mt-4 flex items-center gap-2 text-sm text-foreground">
               <Clock className="size-4 text-primary" />
               {article.readingTime} min read
             </p>
-            <p className="mt-2">{article.region}</p>
+            <p className="text-sm">{new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+            <div className="rounded-3xl border border-border bg-card p-4 text-sm text-foreground">
+              <p className="font-black uppercase tracking-[0.32em] text-primary">Impact</p>
+              <div className="mt-4 grid gap-3 text-foreground">
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <span>Signal</span>
+                  <span className="font-semibold">{article.engagement}%</span>
+                </div>
+                <div className="flex items-center justify-between pt-3 text-foreground">
+                  <span>Trend</span>
+                  <span className="font-semibold">+{article.trendDelta}%</span>
+                </div>
+              </div>
+            </div>
           </aside>
 
-          <div className="space-y-6 text-lg leading-8 text-foreground">
+          <div className="space-y-8 text-lg leading-8 text-foreground">
             {(article.content ?? '').trim() ? (
               (article.content ?? '').split(/\n{2,}/).filter(Boolean).map((paragraph, index) => (
                 <p key={index}>{paragraph}</p>
               ))
             ) : (
-              <div className="rounded-3xl border border-border bg-card p-6">
+              <div className="rounded-3xl border border-border bg-card p-8">
                 <p className="text-lg font-semibold text-foreground">This story is curated for you.</p>
                 <p className="mt-4 text-sm leading-7 text-muted-foreground">
                   Sonke can summarize this headline, explain the context, or help you filter the latest news into what matters most. Tap the assistant at the bottom-right to get the quick version.
@@ -139,14 +181,24 @@ export default async function ArticlePage({
             )}
           </div>
 
-          <aside className="h-fit border border-border bg-background p-5">
-            <p className="mb-3 flex items-center gap-2 text-xs font-black uppercase text-primary">
+          <aside className="rounded-3xl border border-border bg-background p-6 shadow-sm shadow-black/5">
+            <p className="mb-4 flex items-center gap-2 text-xs font-black uppercase text-primary">
               <Bot className="size-4" />
               Ask Sonke
             </p>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Need a summary, a quick explanation, or a filtered view of the latest updates? Open Sonke and ask about this story.
+              Need a clear summary, a faster explanation, or a quick checklist of what matters in this story? Open Sonke and ask about this article for instant insights.
             </p>
+            <div className="mt-6 grid gap-3 text-sm text-foreground">
+              <div className="rounded-3xl bg-card p-4">
+                <p className="font-semibold">Tip</p>
+                <p className="mt-2 text-muted-foreground">Ask for the most important sentence in this story.</p>
+              </div>
+              <div className="rounded-3xl bg-card p-4">
+                <p className="font-semibold">Try</p>
+                <p className="mt-2 text-muted-foreground">“What does this story mean for readers today?”</p>
+              </div>
+            </div>
           </aside>
         </section>
       </article>

@@ -114,12 +114,12 @@ export function ArticleForm({
         <textarea className={`${inputClass} min-h-56`} name="content" defaultValue={article?.content ?? ''} />
       </Field>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => runAi('generate_headline')}>Generate Headline</Button>
-        <Button type="button" variant="outline" size="sm" onClick={() => runAi('improve_headline')}>Improve Headline</Button>
-        <Button type="button" variant="outline" size="sm" onClick={() => runAi('summarize_article')}>Summarize</Button>
-        <Button type="button" variant="outline" size="sm" onClick={() => runAi('explain_like_15')}>Explain Like 15</Button>
-        <Button type="button" variant="outline" size="sm" onClick={() => runAi('generate_seo_description')}>SEO Description</Button>
-        <Button type="button" variant="outline" size="sm" onClick={() => runAi('generate_tags')}>Generate Tags</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => runAi('generate_headline')}>Sonke: Generate headline</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => runAi('improve_headline')}>Sonke: Improve headline</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => runAi('summarize_article')}>Sonke: Summarize</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => runAi('explain_like_15')}>Sonke: Explain</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => runAi('generate_seo_description')}>Sonke: SEO description</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => runAi('generate_tags')}>Sonke: Generate tags</Button>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <Field label="Category">
