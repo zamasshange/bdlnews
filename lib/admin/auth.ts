@@ -22,22 +22,32 @@ export async function getAdminUser() {
 
   if (!user) return null
 
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from('users')
     .select('*')
     .eq('id', user.id)
     .maybeSingle()
 
-  return {
-    auth: user,
-    profile: profile ?? {
+  if (!profile) {
+    const { data: insertedProfile, error } = await supabase.from('users').insert({
       id: user.id,
       email: user.email ?? '',
       full_name: user.user_metadata?.full_name ?? user.email ?? 'BDL User',
-      role: 'journalist' as const,
+      role: 'journalist',
       avatar_url: null,
       created_at: user.created_at,
-    },
+    }).single()
+
+    if (error) {
+      throw error
+    }
+
+    profile = insertedProfile
+  }
+
+  return {
+    auth: user,
+    profile,
   }
 }
 
