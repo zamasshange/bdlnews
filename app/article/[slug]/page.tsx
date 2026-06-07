@@ -31,30 +31,35 @@ export async function generateMetadata({
   return buildArticleMetadata(article)
 }
 
-export default async function ArticlePage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
-  const { slug } = await params
-  const [article, articles] = await Promise.all([getArticleBySlug(slug), getPublishedArticles()])
-  if (!article) notFound()
+ export default async function ArticlePage({
+   params,
+ }: {
+   params: Promise<{ slug: string }>
+ }) {
+   const { slug } = await params
+   const [article, articles] = await Promise.all([getArticleBySlug(slug), getPublishedArticles()])
+   if (!article) notFound()
 
-  const contentBlocks = (() => {
-    try {
-      const parsed = JSON.parse(article.content ?? '')
-      return Array.isArray(parsed) ? parsed : null
-    } catch {
-      return null
-    }
-  })()
+   // For external articles, ensure we have displayable content
+   const processedContent = article.externalUrl && !(article.content ?? '').trim()
+     ? article.dek || article.title
+     : article.content
 
-  const related = articles
-    .filter((item) => item.slug !== article.slug && item.category === article.category)
-    .concat(articles.filter((item) => item.slug !== article.slug && item.category !== article.category))
-    .slice(0, 3)
+   const contentBlocks = (() => {
+     try {
+       const parsed = JSON.parse(processedContent ?? '')
+       return Array.isArray(parsed) ? parsed : null
+     } catch {
+       return null
+     }
+   })()
 
-  const articleContext = buildArticleContext(article)
+   const related = articles
+     .filter((item) => item.slug !== article.slug && item.category === article.category)
+     .concat(articles.filter((item) => item.slug !== article.slug && item.category !== article.category))
+     .slice(0, 3)
+
+   const articleContext = buildArticleContext(article)
 
   const renderBlock = (block: any, index: number) => {
     switch (block.type) {
@@ -323,14 +328,33 @@ export default async function ArticlePage({
               ))
             ) : (
               <div className="rounded-3xl border border-border bg-card p-8">
-                <p className="text-lg font-semibold text-foreground">This story is curated for you.</p>
-                <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                  Sonke can summarize this headline, explain the context, or help you filter the latest news into what matters most. Tap the assistant at the bottom-right to get the quick version.
-                </p>
+                <p className="text-lg font-semibold text-foreground">{article.dek}</p>
+                {article.externalUrl && (
+                  <>
+                    <p className="mt-6">
+                      <a
+                        href={article.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-background transition hover:bg-primary/90"
+                      >
+                        Go to article
+                        <ArrowUpRight className="size-4" />
+                      </a>
+                    </p>
+                    <p className="mt-4 text-sm text-muted-foreground">
+                      This article was syndicated from {article.author}. BDL News presents this story with summary and context. The full reporting belongs to the original publisher.
+                    </p>
+                  </>
+                )}
+                {!article.externalUrl && (
+                  <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                    Sonke can summarize this headline, explain the context, or help you filter the latest news into what matters most. Tap the assistant at the bottom-right to get the quick version.
+                  </p>
+                )}
               </div>
             )}
           </div>
-
         </section>
       </article>
 
