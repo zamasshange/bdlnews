@@ -45,19 +45,6 @@ function NewsLink({
   className: string
   children: React.ReactNode
 }) {
-  if (article.externalUrl) {
-    return (
-      <a
-        href={article.externalUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={className}
-      >
-        {children}
-      </a>
-    )
-  }
-
   return (
     <Link href={`/article/${article.slug}`} className={className}>
       {children}
@@ -91,11 +78,9 @@ export default async function HomePage() {
             </div>
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {externalArticles.map((article) => (
-                <a
-                  key={article.externalUrl ?? article.slug}
-                  href={article.externalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  key={article.slug}
+                  href={`/article/${article.slug}`}
                   className="group overflow-hidden rounded-3xl border border-border bg-white shadow-sm transition hover:border-primary"
                 >
                   <div className="relative h-52 overflow-hidden bg-muted">
@@ -109,7 +94,7 @@ export default async function HomePage() {
                     <p className="mt-3 text-sm leading-6 text-muted-foreground">{article.dek}</p>
                     <p className="mt-5 text-xs uppercase tracking-[0.2em] text-slate-500">{article.author} • {new Date(article.publishedAt).toLocaleDateString()}</p>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -307,11 +292,9 @@ export default async function HomePage() {
         <SectionTitle kicker="External Wire" title="Live News from the Feed" />
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {externalArticles.map((article) => (
-            <a
-              key={article.externalUrl ?? article.slug}
-              href={article.externalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              key={article.slug}
+              href={`/article/${article.slug}`}
               className="group overflow-hidden rounded-3xl border border-border bg-white shadow-sm transition hover:border-primary"
             >
               <div className="relative h-52 overflow-hidden bg-muted">
@@ -329,10 +312,10 @@ export default async function HomePage() {
                   {article.title}
                 </h2>
                 <p className="mt-4 text-xs uppercase tracking-[0.24em] text-muted-foreground">
-                  {new Date(article.publishedAt).toLocaleDateString()}
+                  {article.author} • {new Date(article.publishedAt).toLocaleDateString()}
                 </p>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       </section>

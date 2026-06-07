@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowUpRight, Clock, Sparkles } from 'lucide-react'
 import { ArticleCard } from '@/components/article-card'
 import { ArticleAiTools } from '@/components/article-ai-tools'
+import { ArticleSourceCredit } from '@/components/article-source-credit'
 import { Comments } from '@/components/comments'
 import { SiteShell } from '@/components/site-shell'
 import { ArticleViewTracker } from '@/components/tracking/article-view-tracker'
@@ -281,14 +282,18 @@ export default async function ArticlePage({
 
         <section className="jox-container grid gap-10 py-10 lg:grid-cols-[0.22fr_0.78fr]">
           <aside className="space-y-6 text-xs uppercase text-muted-foreground lg:sticky lg:top-[5.75rem]">
-            {article.authorId ? (
+            {article.externalUrl ? (
+              <p className="font-black text-foreground">{article.author}</p>
+            ) : article.authorId ? (
               <Link href={`/author/${article.authorId}`} className="font-black text-foreground transition hover:text-primary">
                 {article.author}
               </Link>
             ) : (
               <p className="font-black text-foreground">{article.author}</p>
             )}
-            <p className="text-sm text-foreground">{article.authorRole}</p>
+            <p className="text-sm text-foreground">
+              {article.externalUrl ? `Syndicated from ${article.author}` : article.authorRole}
+            </p>
             <p className="mt-4 flex items-center gap-2 text-sm text-foreground">
               <Clock className="size-4 text-primary" />
               {article.readingTime} min read
@@ -329,7 +334,9 @@ export default async function ArticlePage({
         </section>
       </article>
 
-      {article.id && <Comments articleId={article.id} />}
+      <ArticleSourceCredit article={article} />
+
+      {article.id && !article.externalUrl && <Comments articleId={article.id} />}
 
       <section className="border-t border-border bg-muted/30">
         <div className="jox-container py-10">

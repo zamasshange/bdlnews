@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { createHash } from 'crypto'
+import { cache } from 'react'
 import { type Article, type AuthorProfile, type Category, type LiveItem, NAV_LINKS, sampleAuthors, podcastEpisodes } from '@/lib/data'
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
@@ -20,19 +22,24 @@ function slugifyCategory(value?: string | null) {
     .replace(/[^a-z0-9-]/g, '')
 }
 
+export function externalArticleSlug(url: string) {
+  return `ext-${createHash('sha256').update(url).digest('hex').slice(0, 12)}`
+}
+
 function mapExternalNewsItem(row: ExternalNewsItem): Article {
   const title = row.title || 'Untitled story'
   const publishedAt = row.publishedAt || new Date().toISOString()
+  const sourceName = row.source || 'Original publisher'
   return {
     id: row.url,
-    slug: slugifyCategory(title),
+    slug: externalArticleSlug(row.url),
     title,
     dek: row.description || '',
     content: row.description || '',
     category: toCategory(row.category ?? row.source ?? undefined),
     image: row.imageUrl || '/placeholder.jpg',
-    author: row.source || 'BDL Newsroom',
-    authorRole: 'External feed',
+    author: sourceName,
+    authorRole: 'Syndicated source',
     readingTime: Math.max(3, Math.ceil((row.description ?? '').split(/\s+/).filter(Boolean).length / 220)),
     publishedAt,
     region: row.country || 'Global',
@@ -50,6 +57,13 @@ export async function getExternalNewsItems(query?: string, limit = 12): Promise<
     .filter((item) => item.title)
     .slice(0, limit)
     .map(mapExternalNewsItem)
+}
+
+const cachedExternalNews = cache(async (limit = 100) => getExternalNewsItems(undefined, limit))
+
+export async function findExternalArticleBySlug(slug: string) {
+  const articles = await cachedExternalNews(100)
+  return articles.find((article) => article.slug === slug)
 }
 
 function estimateReadingTime(content?: string | null) {
@@ -169,27 +183,30 @@ export async function getPublishedArticles(limit = 50): Promise<Article[]> {
 }
 
 export async function getArticleBySlug(slug: string): Promise<Article | undefined> {
-  if (!hasSupabaseAdminConfig()) return undefined
+  if (hasSupabaseAdminConfig()) {
+    const supabase = createSupabaseAdminClient()
 
-  const supabase = createSupabaseAdminClient()
+    if (supabaseNewsTable !== 'articles') {
+      const { data, error } = await supabase.from(supabaseNewsTable).select('*').limit(200)
+      if (!error && data?.length) {
+        const match = data
+          .map((row) => mapFlexibleArticle(row as Record<string, any>))
+          .find((article) => article.slug === slug || article.id === slug)
+        if (match) return match
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('articles')
+        .select('*, authors(*), categories(*)')
+        .eq('slug', slug)
+        .in('status', ['published', 'breaking'])
+        .maybeSingle()
 
-  if (supabaseNewsTable !== 'articles') {
-    const { data, error } = await supabase.from(supabaseNewsTable).select('*').limit(200)
-    if (error || !data?.length) return undefined
-    return data
-      .map((row) => mapFlexibleArticle(row as Record<string, any>))
-      .find((article) => article.slug === slug || article.id === slug)
+      if (!error && data) return mapArticle(data as ArticleRow)
+    }
   }
 
-  const { data, error } = await supabase
-    .from('articles')
-    .select('*, authors(*), categories(*)')
-    .eq('slug', slug)
-    .in('status', ['published', 'breaking'])
-    .maybeSingle()
-
-  if (error || !data) return undefined
-  return mapArticle(data as ArticleRow)
+  return findExternalArticleBySlug(slug)
 }
 
 export async function getLiveUpdates(limit = 20): Promise<LiveItem[]> {

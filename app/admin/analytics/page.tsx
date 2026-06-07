@@ -1,4 +1,4 @@
-import { AnalyticsChart } from '@/components/admin/analytics-chart'
+import { PostHogAnalyticsPanel } from '@/components/admin/posthog-analytics-panel'
 import { ProtectedAdminPage } from '@/components/admin/protected-admin-page'
 import { AdminPageHeader, AdminTable, StatCard, Td, Th } from '@/components/admin/ui'
 import { getDashboardStats } from '@/lib/admin/data'
@@ -8,15 +8,26 @@ export default async function AnalyticsPage() {
   const stats = await getDashboardStats()
   return (
     <ProtectedAdminPage>
-      <AdminPageHeader title="Analytics" description="Real-time editorial intelligence across views, readers, devices, sources, and locations." />
-      <div className="grid gap-4 md:grid-cols-4">
+      <AdminPageHeader
+        title="Analytics"
+        description="Live visitor intelligence from PostHog, plus editorial view data from the BDL newsroom."
+      />
+
+      <PostHogAnalyticsPanel />
+
+      <div className="mt-10">
+        <AdminPageHeader
+          title="Editorial Views"
+          description="Article view counts stored in the BDL database."
+        />
+      </div>
+      <div className="mt-4 grid gap-4 md:grid-cols-4">
         <StatCard label="Total Views" value={formatCount(stats.totalViews)} />
         <StatCard label="Views Today" value={formatCount(stats.todayViews)} />
         <StatCard label="Monthly Views" value={formatCount(stats.totalViews)} />
         <StatCard label="Active Readers" value={stats.activeReaders} />
       </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.8fr]">
-        <AnalyticsChart />
+      <div className="mt-6">
         <AdminTable>
           <thead><tr><Th>Metric</Th><Th>Current Signal</Th></tr></thead>
           <tbody>

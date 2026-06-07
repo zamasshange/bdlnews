@@ -13,11 +13,6 @@ export function ArticleCard({
   article: Article
   size?: 'sm' | 'md' | 'lg'
 }) {
-  const Wrapper = article.externalUrl ? 'a' : Link
-  const wrapperProps = article.externalUrl
-    ? { href: article.externalUrl, target: '_blank', rel: 'noopener noreferrer' }
-    : { href: `/article/${article.slug}` }
-
   return (
     <motion.article
       initial={{ opacity: 0, y: 24 }}
@@ -25,9 +20,9 @@ export function ArticleCard({
       viewport={{ once: true, margin: '-80px' }}
       transition={{ duration: 0.55, ease: [0.21, 0.47, 0.32, 0.98] }}
     >
-      <Wrapper
+      <Link
+        href={`/article/${article.slug}`}
         className="story-link group block border-t border-border pt-4"
-        {...wrapperProps}
       >
         <div className={cn('relative overflow-hidden bg-muted', size === 'lg' ? 'aspect-[1.38]' : 'aspect-[1.45]')}>
           <Image
@@ -52,7 +47,7 @@ export function ArticleCard({
             {timeAgo(article.publishedAt)}
           </p>
         </div>
-      </Wrapper>
+      </Link>
     </motion.article>
   )
 }

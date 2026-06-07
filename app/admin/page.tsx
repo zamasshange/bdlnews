@@ -1,4 +1,5 @@
 import { AnalyticsChart } from '@/components/admin/analytics-chart'
+import { PostHogAnalyticsPanel } from '@/components/admin/posthog-analytics-panel'
 import { ProtectedAdminPage } from '@/components/admin/protected-admin-page'
 import { AdminPageHeader, AdminTable, StatCard, Td, Th } from '@/components/admin/ui'
 import { Logo } from '@/components/logo'
@@ -43,6 +44,9 @@ export default async function AdminDashboardPage() {
         <StatCard label="Authors" value={stats.totalAuthors} />
         <StatCard label="Total Views" value={formatCount(stats.totalViews)} />
         <StatCard label="Today's Views" value={formatCount(stats.todayViews)} hint={`${stats.activeReaders} active readers`} />
+      </div>
+      <div className="mt-8">
+        <PostHogAnalyticsPanel compact />
       </div>
       <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
         <AnalyticsChart data={chartData} />

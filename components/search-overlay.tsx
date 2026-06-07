@@ -149,26 +149,8 @@ export function SearchOverlay({
               </p>
               <div className="grid gap-1">
                 {results.map((a) => {
-                  const key = a.externalUrl ?? a.slug
-                  const isExternal = Boolean(a.externalUrl)
-                  return isExternal ? (
-                    <a
-                      key={key}
-                      href={a.externalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => onOpenChange(false)}
-                      className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-accent"
-                    >
-                      <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                        {a.category}
-                      </span>
-                      <span className="line-clamp-1 flex-1 text-sm text-foreground">
-                        {a.title}
-                      </span>
-                      <ArrowUpRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
-                    </a>
-                  ) : (
+                  const key = a.slug
+                  return (
                     <Link
                       key={key}
                       href={`/article/${a.slug}`}
@@ -178,6 +160,11 @@ export function SearchOverlay({
                       <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
                         {a.category}
                       </span>
+                      {a.externalUrl ? (
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Wire
+                        </span>
+                      ) : null}
                       <span className="line-clamp-1 flex-1 text-sm text-foreground">
                         {a.title}
                       </span>
