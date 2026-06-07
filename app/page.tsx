@@ -10,6 +10,31 @@ import {
   type Category,
 } from '@/lib/data'
 import { getExternalNewsItems, getLiveUpdates, getPublishedArticles, getTrendingArticles } from '@/lib/news'
+import { buildPageMetadata } from '@/lib/seo'
+import { siteConfig } from '@/lib/site'
+
+export const metadata = {
+  ...buildPageMetadata({
+  title: 'Breaking News, Latest Headlines & Live Updates',
+  description:
+    'BDL News delivers breaking news, latest headlines, South African news, African news, world news, business, technology, sports, entertainment, and current affairs — founded by Zama Shange.',
+  path: '/',
+  keywords: [
+    'Breaking News',
+    'Latest News',
+    'News Today',
+    'Headlines Today',
+    'Live News Updates',
+    'Trending News',
+    'South African News',
+    'African News',
+    'World News',
+  ],
+  }),
+  title: {
+    absolute: `${siteConfig.name} — Breaking News, Latest Headlines & Live Updates`,
+  },
+}
 
 function NewsLink({
   article,

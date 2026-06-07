@@ -64,6 +64,7 @@ export interface Article {
   seoDescription?: string
   readingTime: number
   publishedAt: string
+  updatedAt?: string
   region: string
   readers: number
   comments?: number

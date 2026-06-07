@@ -4,8 +4,10 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { ArticleCard } from '@/components/article-card'
 import { SiteShell } from '@/components/site-shell'
+import { JsonLd } from '@/components/seo/json-ld'
 import { formatCount } from '@/lib/data'
 import { getAuthorProfile } from '@/lib/news'
+import { breadcrumbJsonLd, buildPageMetadata, personJsonLd } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,10 +15,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const profile = await getAuthorProfile(id)
   if (!profile) return {}
-  return {
-    title: `${profile.author.name} | BDL News`,
-    description: profile.author.bio ?? `Articles by ${profile.author.name}`,
-  }
+  return buildPageMetadata({
+    title: profile.author.name,
+    description:
+      profile.author.bio ??
+      `Read articles by ${profile.author.name}, ${profile.author.role} at BDL News — independent South African and African digital news.`,
+    path: `/author/${id}`,
+    keywords: [profile.author.name, profile.author.role, 'BDL News Authors', 'Journalist'],
+    ogImage: profile.author.profile_image,
+  })
 }
 
 export default async function AuthorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +33,23 @@ export default async function AuthorPage({ params }: { params: Promise<{ id: str
 
   return (
     <SiteShell showTicker>
+      <JsonLd
+        data={[
+          personJsonLd({
+            id: profile.author.id,
+            name: profile.author.name,
+            bio: profile.author.bio,
+            role: profile.author.role,
+            profileImage: profile.author.profile_image,
+            socialLinks: profile.author.social_links,
+          }),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Authors', path: '/authors' },
+            { name: profile.author.name, path: `/author/${profile.author.id}` },
+          ]),
+        ]}
+      />
       <section className="jox-container py-8 md:py-12">
         <Link href="/" className="mb-8 inline-flex items-center gap-2 text-xs font-black uppercase text-muted-foreground transition hover:text-primary">
           <ArrowLeft className="size-4" />

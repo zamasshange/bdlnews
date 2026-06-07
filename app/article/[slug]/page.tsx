@@ -7,8 +7,10 @@ import { ArticleAiTools } from '@/components/article-ai-tools'
 import { Comments } from '@/components/comments'
 import { SiteShell } from '@/components/site-shell'
 import { ArticleViewTracker } from '@/components/tracking/article-view-tracker'
+import { JsonLd } from '@/components/seo/json-ld'
 import { buildArticleContext } from '@/lib/article-text'
 import { getArticleBySlug, getPublishedArticles } from '@/lib/news'
+import { breadcrumbJsonLd, buildArticleMetadata, newsArticleJsonLd } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,10 +27,7 @@ export async function generateMetadata({
   const article = await getArticleBySlug(slug)
   if (!article) return {}
 
-  return {
-    title: `${article.title} | BDL News`,
-    description: article.dek,
-  }
+  return buildArticleMetadata(article)
 }
 
 export default async function ArticlePage({
@@ -165,8 +164,20 @@ export default async function ArticlePage({
     }
   }
 
+  const categorySlug = article.category.toLowerCase().replace(/\s+/g, '-')
+
   return (
     <SiteShell showTicker>
+      <JsonLd
+        data={[
+          newsArticleJsonLd(article),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: article.category, path: `/category/${categorySlug}` },
+            { name: article.title, path: `/article/${article.slug}` },
+          ]),
+        ]}
+      />
       <ArticleViewTracker articleId={article.id ?? article.slug} />
       <article>
         <header className="jox-container py-8 md:py-12">

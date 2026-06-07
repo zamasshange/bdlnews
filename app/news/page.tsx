@@ -5,8 +5,17 @@ import { ArticleCard } from '@/components/article-card'
 import { SiteShell } from '@/components/site-shell'
 import { getPublishedArticles, getTrendingArticles } from '@/lib/news'
 import { NAV_LINKS } from '@/lib/data'
+import { buildPageMetadata } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata = buildPageMetadata({
+  title: 'Latest News & Breaking Headlines',
+  description:
+    'Browse the latest news, breaking headlines, and live updates from BDL News — covering South Africa, Africa, world affairs, business, technology, sports, and entertainment.',
+  path: '/news',
+  keywords: ['Latest News', 'Breaking News', 'News Today', 'Headlines Today', 'Live News Updates', 'Trending News'],
+})
 
 export default async function NewsPage() {
   const [articles, trending] = await Promise.all([getPublishedArticles(30), getTrendingArticles('trending', 10)])

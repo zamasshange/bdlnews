@@ -131,6 +131,7 @@ export function mapArticle(row: ArticleRow): Article {
     seoDescription: row.seo_description ?? undefined,
     readingTime: estimateReadingTime(content),
     publishedAt: row.publish_date ?? row.created_at,
+    updatedAt: row.updated_at ?? row.publish_date ?? row.created_at,
     region: 'Global',
     readers: viewCount,
     comments: commentCount,
@@ -305,7 +306,7 @@ export async function getAuthorDirectory(): Promise<AuthorProfile[]> {
     id: author.id,
     name: author.name,
     role: author.role ?? 'Author',
-    expertise: typeof author.expertise === 'string' ? author.expertise.split(',').map((item) => item.trim()).filter(Boolean) : Array.isArray(author.expertise) ? author.expertise : [],
+    expertise: typeof author.expertise === 'string' ? author.expertise.split(',').map((item: string) => item.trim()).filter(Boolean) : Array.isArray(author.expertise) ? author.expertise : [],
     bio: author.bio ?? '',
     profileImage: author.profile_image ?? '/placeholder.jpg',
     socialLinks: {

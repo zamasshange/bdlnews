@@ -3,8 +3,11 @@ import Link from 'next/link'
 import { ArrowLeft, ArrowUpRight, Sparkles } from 'lucide-react'
 import { ArticleCard } from '@/components/article-card'
 import { SiteShell } from '@/components/site-shell'
+import { JsonLd } from '@/components/seo/json-ld'
 import { NAV_LINKS } from '@/lib/data'
 import { getArticlesByCategorySlug, getCategoryBySlug } from '@/lib/news'
+import { getCategoryDisplay } from '@/lib/category-branding'
+import { breadcrumbJsonLd, categoryMetadata } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,10 +34,7 @@ export async function generateMetadata({
   const category = (await getCategoryBySlug(slug)) ?? { name: titleFromSlug(slug) }
   if (!category.name) return {}
 
-  return {
-    title: `${category.name} | BDL News`,
-    description: `Latest ${category.name.toLowerCase()} stories from BDL News.`,
-  }
+  return categoryMetadata(slug, category.name)
 }
 
 export default async function CategoryPage({
@@ -47,9 +47,16 @@ export default async function CategoryPage({
 
   const shownArticles = await getArticlesByCategorySlug(slug)
   const lead = shownArticles[0]
+  const display = getCategoryDisplay(slug, category.name)
 
   return (
     <SiteShell showTicker>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: display.name, path: `/category/${slug}` },
+        ])}
+      />
       <section className="jox-container py-8 md:py-12">
         <Link
           href="/"
@@ -63,22 +70,22 @@ export default async function CategoryPage({
           <div>
             <p className="mb-4 text-xs font-black uppercase text-primary">Category</p>
             <h1 className="text-5xl font-semibold leading-tight text-foreground md:text-6xl">
-              {category.name}
+              {display.name}
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              A focused feed of BDL reporting, context, and AI-assisted signals across the
-              latest {category.name.toLowerCase()} stories.
+              {display.description}
             </p>
           </div>
 
           <div className="border border-border bg-card p-5">
             <p className="mb-3 flex items-center gap-2 text-xs font-black uppercase text-primary">
               <Sparkles className="size-4" />
-              BDL Signal
+              {display.sidebarTitle}
             </p>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              {shownArticles.length} stories tracked with live reader interest, source
-              context, and editorial priority.
+              {slug === 'ai-news'
+                ? display.sidebarDescription
+                : `${shownArticles.length} ${display.sidebarDescription}`}
             </p>
           </div>
         </div>
@@ -122,7 +129,7 @@ export default async function CategoryPage({
           </>
         ) : (
           <div className="rounded-3xl border border-border bg-card p-12 text-center">
-            <p className="text-sm uppercase tracking-[0.3em] text-primary">{category.name}</p>
+            <p className="text-sm uppercase tracking-[0.3em] text-primary">{display.name}</p>
             <h2 className="mt-4 text-4xl font-semibold text-foreground">No stories available yet.</h2>
             <p className="mt-4 text-base leading-7 text-muted-foreground">
               We don’t have any published stories in this category yet, but the page is ready and will update as new content arrives.

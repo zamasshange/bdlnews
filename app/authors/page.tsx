@@ -2,8 +2,17 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { SiteShell } from '@/components/site-shell'
 import { getAuthorDirectory } from '@/lib/news'
+import { buildPageMetadata } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata = buildPageMetadata({
+  title: 'Authors & Journalists',
+  description:
+    'Meet the BDL News authors and journalists covering breaking news, South African news, African news, world news, business, technology, and current affairs.',
+  path: '/authors',
+  keywords: ['BDL News Authors', 'Journalists', 'Zama Shange', 'Newsroom'],
+})
 
 export default async function AuthorsPage() {
   const authors = await getAuthorDirectory()

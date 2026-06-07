@@ -3,6 +3,15 @@ import Image from 'next/image'
 import { Play, Share2, Search } from 'lucide-react'
 import { SiteShell } from '@/components/site-shell'
 import { getPodcastEpisodes } from '@/lib/news'
+import { buildPageMetadata } from '@/lib/seo'
+
+export const metadata = buildPageMetadata({
+  title: 'BDL News Podcast — Audio Briefings & Headlines',
+  description:
+    'Listen to BDL News podcast episodes — audio briefings, headline explainers, and conversations on breaking news, politics, business, technology, and African current affairs.',
+  path: '/podcast',
+  keywords: ['BDL News Podcast', 'News Podcast', 'Audio News', 'Headlines Podcast'],
+})
 
 export default async function PodcastPage() {
   const episodes = getPodcastEpisodes()

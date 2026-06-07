@@ -1,10 +1,36 @@
 import Link from 'next/link'
 import { ArrowRight, Globe, Sparkles, ShieldCheck, Users } from 'lucide-react'
+import { JsonLd } from '@/components/seo/json-ld'
 import { SiteShell } from '@/components/site-shell'
+import { breadcrumbJsonLd, buildPageMetadata, founderJsonLd, organizationJsonLd } from '@/lib/seo'
+export const metadata = buildPageMetadata({
+  title: 'About BDL News — Independent South African Digital News Platform',
+  description:
+    'BDL News is an independent digital news platform founded by Zama Shange. Breaking news, South African news, African news, world news, business, technology, sports, entertainment, and current affairs.',
+  path: '/about-us',
+  keywords: [
+    'About BDL News',
+    'Zama Shange Founder',
+    'Burdolar Media',
+    'BDL News South Africa',
+    'BDL News Africa',
+    'Independent News',
+  ],
+})
 
 export default function AboutPage() {
   return (
     <SiteShell showTicker>
+      <JsonLd
+        data={[
+          organizationJsonLd(),
+          founderJsonLd(),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'About Us', path: '/about-us' },
+          ]),
+        ]}
+      />
       <section className="jox-container py-10 md:py-14">
         <div className="grid gap-10 lg:grid-cols-[0.8fr_0.4fr] lg:items-end">
           <div>
@@ -13,7 +39,7 @@ export default function AboutPage() {
               Africa’s AI-powered newsroom for stories that matter.
             </h1>
             <p className="mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
-              BDL News is an independent digital media platform built to help people understand the world through trustworthy journalism, intelligent technology, and modern storytelling.
+              BDL News is an independent digital news platform founded by Zama Shange. The platform delivers breaking news, South African news, African news, world news, business, technology, sports, entertainment, and current affairs coverage.
             </p>
           </div>
           <div className="space-y-4 rounded-3xl border border-border bg-card p-8">
