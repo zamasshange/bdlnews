@@ -12,7 +12,7 @@ async function login(formData: FormData) {
     password: String(formData.get('password') ?? ''),
   })
   if (error) redirect('/admin/login?error=1')
-  redirect('/admin')
+  redirect('/admin?login=success')
 }
 
 export default function AdminLoginPage() {

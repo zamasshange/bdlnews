@@ -1,9 +1,31 @@
 'use client'
 
 import { useEffect } from 'react'
+import { AnalyticsEvents, trackEvent } from '@/lib/analytics'
 
-export function ArticleViewTracker({ articleId }: { articleId: string }) {
+export function ArticleViewTracker({
+  articleId,
+  slug,
+  title,
+  category,
+  author,
+}: {
+  articleId: string
+  slug?: string
+  title?: string
+  category?: string
+  author?: string
+}) {
   useEffect(() => {
+    trackEvent(AnalyticsEvents.articleView, {
+      article_id: articleId,
+      slug,
+      title,
+      category,
+      author,
+      referrer: document.referrer || null,
+    })
+
     const startedAt = Date.now()
     const track = () => {
       navigator.sendBeacon?.(

@@ -178,7 +178,13 @@ export default async function ArticlePage({
           ]),
         ]}
       />
-      <ArticleViewTracker articleId={article.id ?? article.slug} />
+      <ArticleViewTracker
+        articleId={article.id ?? article.slug}
+        slug={article.slug}
+        title={article.title}
+        category={article.category}
+        author={article.author}
+      />
       <article>
         <header className="jox-container py-8 md:py-12">
           <Link

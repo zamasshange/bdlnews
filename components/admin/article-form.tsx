@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { saveArticle } from '@/app/admin/actions'
 import { Field, inputClass } from '@/components/admin/ui'
 import { Button } from '@/components/ui/button'
+import { AnalyticsEvents, trackEvent } from '@/lib/analytics'
 
 const statuses = ['draft', 'review', 'scheduled', 'published', 'archived', 'breaking']
 
@@ -19,6 +20,7 @@ export function ArticleForm({
   const [categoryName, setCategoryName] = useState(article?.category ?? article?.categories?.name ?? '')
   const [autosaveState, setAutosaveState] = useState('Draft autosaves every 30 seconds')
   const [isPending, startTransition] = useTransition()
+  const aiUsedRef = useRef(false)
 
   function values() {
     const form = formRef.current
@@ -84,7 +86,24 @@ export function ArticleForm({
     const target = map[action]
     const input = target ? (formRef.current?.elements.namedItem(target) as HTMLInputElement | HTMLTextAreaElement | null) : null
     if (input) input.value = result.text
+    aiUsedRef.current = true
+    trackEvent(AnalyticsEvents.aiArticleGenerated, {
+      action,
+      article_id: articleId || null,
+      category: categoryName || null,
+    })
     setAutosaveState('AI response applied')
+  }
+
+  function handleSubmit() {
+    const currentValues = values()
+    trackEvent(AnalyticsEvents.articleCreated, {
+      article_id: articleId || null,
+      headline: String(currentValues.headline ?? ''),
+      status: String(currentValues.status ?? 'draft'),
+      category: categoryName || null,
+      source: aiUsedRef.current ? 'ai_assisted' : 'manual',
+    })
   }
 
   useEffect(() => {
@@ -97,7 +116,7 @@ export function ArticleForm({
   }, [articleId])
 
   return (
-    <form ref={formRef} action={saveArticle} className="grid gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <form ref={formRef} action={saveArticle} onSubmit={handleSubmit} className="grid gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
       {articleId && <input type="hidden" name="id" value={articleId} />}
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Headline">
