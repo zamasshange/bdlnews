@@ -8,7 +8,7 @@ import { Menu, Search, X } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { SearchOverlay } from '@/components/search-overlay'
 import { Button } from '@/components/ui/button'
-import { NAV_LINKS, SITE_LINKS } from '@/lib/data'
+import { NAV_LINKS } from '@/lib/data'
 import { cn } from '@/lib/utils'
 
 export function Navbar() {
@@ -104,27 +104,6 @@ export function Navbar() {
                 </Link>
               )
             })}
-            {SITE_LINKS.map((link) => {
-              const active = pathname === link.href
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    'relative px-3 py-1 text-[12px] font-black uppercase tracking-wide text-muted-foreground transition hover:text-primary',
-                    active && 'text-primary',
-                  )}
-                >
-                  {link.label}
-                  {active && (
-                    <motion.span
-                      layoutId="nav-active"
-                      className="absolute inset-x-3 -bottom-3 h-0.5 bg-primary"
-                    />
-                  )}
-                </Link>
-              )
-            })}
           </nav>
         </div>
       </header>
@@ -177,16 +156,6 @@ export function Navbar() {
                     </Link>
                   )
                 })}
-                {SITE_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="border-b border-border py-4 font-heading text-3xl leading-none text-foreground transition hover:text-primary"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
               </nav>
             </motion.div>
           </motion.div>

@@ -39,14 +39,13 @@ export async function generateSonkeReply(message: string, context?: string) {
   const systemPrompt = [
     'You are Sonke, the intelligent news assistant for a news website.',
     'Provide concise summaries, explain why stories matter, and help users filter news by topic or angle.',
+    'When article context is provided, answer based on that article — never ask the user to share or paste the article.',
     'When asked about a story, return a short, clear answer with useful next steps or related topics.',
   ].join(' ')
 
-  const promptParts = [systemPrompt]
-  if (context) promptParts.push(`Context:\n${context}`)
-  promptParts.push(`User: ${message}`)
-  promptParts.push('Assistant:')
-  const prompt = promptParts.join('\n\n')
+  const userContent = context
+    ? `Article context:\n${context}\n\nRequest: ${message}`
+    : message
 
   const response = await fetch(apiUrl, {
     method: 'POST',
@@ -58,7 +57,7 @@ export async function generateSonkeReply(message: string, context?: string) {
       model,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: message },
+        { role: 'user', content: userContent },
       ],
       max_tokens: 512,
       temperature: 0.3,

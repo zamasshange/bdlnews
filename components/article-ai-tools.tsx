@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ArrowRight, Bot, Clock, Sparkles } from 'lucide-react'
+import { Bot } from 'lucide-react'
+import { buildArticleContext } from '@/lib/article-text'
 
 const tools = [
   { label: 'Summarize Article', prompt: 'Summarize this article in 3 short bullet points.' },
@@ -26,11 +27,7 @@ export function ArticleAiTools({ article }: { article: Record<string, any> }) {
   const [active, setActive] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const articleContext = useMemo(() => {
-    return [article.title, article.dek, article.content, article.category, article.author]
-      .filter(Boolean)
-      .join('\n\n')
-  }, [article.title, article.dek, article.content, article.category, article.author])
+  const articleContext = useMemo(() => buildArticleContext(article), [article])
 
   async function runTool(prompt: string, label: string) {
     setActive(label)

@@ -1,12 +1,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, ArrowUpRight, Bot, Clock, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Clock, Sparkles } from 'lucide-react'
 import { ArticleCard } from '@/components/article-card'
 import { ArticleAiTools } from '@/components/article-ai-tools'
 import { Comments } from '@/components/comments'
 import { SiteShell } from '@/components/site-shell'
 import { ArticleViewTracker } from '@/components/tracking/article-view-tracker'
+import { buildArticleContext } from '@/lib/article-text'
 import { getArticleBySlug, getPublishedArticles } from '@/lib/news'
 
 export const dynamic = 'force-dynamic'
@@ -53,13 +54,7 @@ export default async function ArticlePage({
     .concat(articles.filter((item) => item.slug !== article.slug && item.category !== article.category))
     .slice(0, 3)
 
-  const articleContext = JSON.stringify({
-    title: article.title,
-    subtitle: article.dek,
-    category: article.category,
-    author: article.author,
-    content: article.content,
-  })
+  const articleContext = buildArticleContext(article)
 
   const renderBlock = (block: any, index: number) => {
     switch (block.type) {
@@ -224,7 +219,6 @@ export default async function ArticlePage({
 
         <section className="jox-container pb-10">
           <div id="article-context" data-context={articleContext} className="hidden" />
-          <ArticleAiTools article={article} />
         </section>
 
         <section className="jox-container space-y-6 pb-10">
@@ -268,7 +262,7 @@ export default async function ArticlePage({
           ) : null}
         </section>
 
-        <section className="jox-container grid gap-10 py-10 lg:grid-cols-[0.22fr_0.56fr_0.22fr]">
+        <section className="jox-container grid gap-10 py-10 lg:grid-cols-[0.22fr_0.78fr]">
           <aside className="space-y-6 text-xs uppercase text-muted-foreground lg:sticky lg:top-[5.75rem]">
             {article.authorId ? (
               <Link href={`/author/${article.authorId}`} className="font-black text-foreground transition hover:text-primary">
@@ -315,29 +309,16 @@ export default async function ArticlePage({
             )}
           </div>
 
-          <aside className="rounded-3xl border border-border bg-background p-6 shadow-sm shadow-black/5">
-            <p className="mb-4 flex items-center gap-2 text-xs font-black uppercase text-primary">
-              <Bot className="size-4" />
-              Ask Sonke
-            </p>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Need a clear summary, a faster explanation, or a quick checklist of what matters in this story? Open Sonke and ask about this article for instant insights.
-            </p>
-            <div className="mt-6 grid gap-3 text-sm text-foreground">
-              <div className="rounded-3xl bg-card p-4">
-                <p className="font-semibold">Tip</p>
-                <p className="mt-2 text-muted-foreground">Ask for the most important sentence in this story.</p>
-              </div>
-              <div className="rounded-3xl bg-card p-4">
-                <p className="font-semibold">Try</p>
-                <p className="mt-2 text-muted-foreground">“What does this story mean for readers today?”</p>
-              </div>
-            </div>
-          </aside>
         </section>
       </article>
 
       {article.id && <Comments articleId={article.id} />}
+
+      <section className="border-t border-border bg-muted/30">
+        <div className="jox-container py-10">
+          <ArticleAiTools article={article} />
+        </div>
+      </section>
 
       <section className="border-y border-border bg-card">
         <div className="jox-container grid gap-6 py-12 lg:grid-cols-[0.3fr_1fr]">
