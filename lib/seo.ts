@@ -256,7 +256,8 @@ export function founderJsonLd() {
 }
 
 export function newsArticleJsonLd(article: Article) {
-  const image = article.image.startsWith('http') ? article.image : absoluteUrl(article.image)
+  const imageSource = article.image || siteConfig.defaultOgImage
+  const image = imageSource.startsWith('http') ? imageSource : absoluteUrl(imageSource)
   return {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',

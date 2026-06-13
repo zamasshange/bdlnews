@@ -11,6 +11,7 @@ import { SiteShell } from '@/components/site-shell'
 import { ArticleViewTracker } from '@/components/tracking/article-view-tracker'
 import { JsonLd } from '@/components/seo/json-ld'
 import { categoryPath, categoryPathFromName } from '@/lib/category-paths'
+import { buildArticleContext } from '@/lib/article-text'
 import { getArticleBySlug, getPublishedArticles } from '@/lib/news'
 import { breadcrumbJsonLd, buildArticleMetadata, newsArticleJsonLd } from '@/lib/seo'
 
