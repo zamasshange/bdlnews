@@ -5,6 +5,7 @@ import { FormattedParagraph } from '@/components/article/formatted-paragraph'
 import { splitParagraphs } from '@/lib/content-segments'
 import {
   isPersistedStubContent,
+  isSyndicatedContentComplete,
   needsSyndicatedBodyFetch,
 } from '@/lib/syndicated-content'
 import { cn } from '@/lib/utils'
@@ -142,7 +143,7 @@ export function ArticleBodyContent({
   const rawContent = article.content ?? ''
   const paragraphs = splitParagraphs(rawContent).filter((paragraph) => !isPersistedStubContent(paragraph))
   const showContinueReading = Boolean(
-    externalUrl && (needsSyndicatedBodyFetch(rawContent) || isPersistedStubContent(rawContent)),
+    externalUrl && !isSyndicatedContentComplete(rawContent) && (needsSyndicatedBodyFetch(rawContent) || isPersistedStubContent(rawContent)),
   )
   const showLead =
     article.dek &&

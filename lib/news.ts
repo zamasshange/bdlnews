@@ -12,7 +12,7 @@ import {
   getCategoryFetchConfig,
 } from '@/lib/category-external'
 import { getCachedSyndicatedArticles, getSyndicatedArticleFromCache, persistSyndicatedArticles } from '@/lib/syndicated-cache'
-import { needsSyndicatedBodyFetch } from '@/lib/syndicated-content'
+import { cleanWireExcerpt, isPaidPlanPlaceholder, needsSyndicatedBodyFetch } from '@/lib/syndicated-content'
 import { enrichSyndicatedArticleFast } from '@/lib/syndicated-enrich'
 import type { ArticleRow } from '@/lib/supabase/types'
 
@@ -38,7 +38,8 @@ function mapExternalNewsItem(row: ExternalNewsItem, forcedCategory?: Category): 
   const title = row.title || 'Untitled story'
   const publishedAt = row.publishedAt || new Date().toISOString()
   const sourceName = row.source || 'Original publisher'
-  const body = row.content || row.description || ''
+  const rawBody = isPaidPlanPlaceholder(row.content) ? row.description || '' : row.content || row.description || ''
+  const body = cleanWireExcerpt(rawBody) || cleanWireExcerpt(row.description) || row.description || ''
   return {
     id: row.url,
     slug: externalArticleSlug(row.url),
@@ -177,7 +178,7 @@ async function resolveSyndicatedArticle(article: Article) {
   if (!needsSyndicatedBodyFetch(article.content)) {
     return article
   }
-  return enrichSyndicatedArticleFast(article, 9000)
+  return enrichSyndicatedArticleFast(article, 12000)
 }
 
 function estimateReadingTime(content?: string | null) {
