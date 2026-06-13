@@ -10,10 +10,12 @@ import {
   type Category,
 } from '@/lib/data'
 import { LivePulseBar, StoryBadge } from '@/components/home/live-pulse-bar'
+import { StoryHeadline } from '@/components/story-headline'
 import { AskSonkeCard } from '@/components/home/ask-sonke-card'
 import { CategoryQuickJump } from '@/components/home/category-quick-jump'
 import { buildExternalOnlyFeed, buildHomeFeed } from '@/lib/home-feed'
 import { fetchAllExternalArticles, getLiveUpdates, getPublishedArticles, getTrendingArticles } from '@/lib/news'
+import { headlineLimits, shortHeadline } from '@/lib/headlines'
 import { buildPageMetadata } from '@/lib/seo'
 import { siteConfig } from '@/lib/site'
 
@@ -121,9 +123,13 @@ export default async function HomePage() {
                 <div className="mt-6">
                   <StoryBadge article={featured} />
                 </div>
-                <h1 className="mt-5 max-w-5xl text-4xl font-medium leading-[1.08] text-foreground transition group-hover:text-primary md:text-5xl">
-                  {featured.title}
-                </h1>
+                <StoryHeadline
+                  as="h1"
+                  title={featured.title}
+                  limit="hero"
+                  lines={2}
+                  className="mt-5 max-w-5xl text-4xl font-medium leading-[1.08] text-foreground transition group-hover:text-primary md:text-5xl"
+                />
               </NewsLink>
               <StoryMeta
                 category={featured.category}
@@ -146,9 +152,13 @@ export default async function HomePage() {
                 <div className="mt-6">
                   <StoryBadge article={secondFeature} />
                 </div>
-                <h2 className="mt-5 max-w-5xl text-4xl font-medium leading-[1.08] text-foreground transition group-hover:text-primary md:text-5xl">
-                  {secondFeature.title}
-                </h2>
+                <StoryHeadline
+                  as="h2"
+                  title={secondFeature.title}
+                  limit="hero"
+                  lines={2}
+                  className="mt-5 max-w-5xl text-4xl font-medium leading-[1.08] text-foreground transition group-hover:text-primary md:text-5xl"
+                />
               </NewsLink>
               <StoryMeta
                 category={secondFeature.category}
@@ -189,9 +199,13 @@ export default async function HomePage() {
               className="mt-5"
               linked={false}
             />
-            <h2 className="mt-5 max-w-4xl text-3xl font-medium leading-tight text-foreground transition group-hover:text-primary md:text-5xl">
-              {featureTwo.title}
-            </h2>
+            <StoryHeadline
+              as="h2"
+              title={featureTwo.title}
+              limit="feature"
+              lines={2}
+              className="mt-5 max-w-4xl text-3xl font-medium leading-tight text-foreground transition group-hover:text-primary md:text-4xl"
+            />
           </NewsLink>
         </article>
 
@@ -229,7 +243,7 @@ export default async function HomePage() {
         <div className="ticker-track flex w-max gap-8 whitespace-nowrap text-3xl font-semibold leading-none text-foreground/10 md:text-5xl">
           {[...trendingTopics, ...trendingTopics, ...trendingTopics].map((topic, index) => (
             <span key={`${topic}-${index}`} className="flex items-center gap-8">
-              {topic}
+              {shortHeadline(topic, headlineLimits.ticker)}
               <span className="text-primary">*</span>
             </span>
           ))}
@@ -252,9 +266,12 @@ export default async function HomePage() {
                   year: 'numeric',
                 })}
               </p>
-              <h3 className="text-2xl font-medium leading-tight text-foreground transition group-hover:text-primary">
-                {article.title}
-              </h3>
+              <StoryHeadline
+                title={article.title}
+                limit="card"
+                lines={2}
+                className="text-2xl font-medium leading-tight text-foreground transition group-hover:text-primary"
+              />
               <span className="mt-5 inline-flex items-center gap-1 text-xs font-black uppercase text-foreground">
                 Read More <ArrowUpRight className="size-3.5 text-primary" />
               </span>
@@ -284,9 +301,13 @@ export default async function HomePage() {
               </div>
               <div className="p-5">
                 <StoryBadge article={article} />
-                <h2 className="mt-4 text-xl font-semibold leading-tight text-foreground transition group-hover:text-primary">
-                  {article.title}
-                </h2>
+                <StoryHeadline
+                  as="h2"
+                  title={article.title}
+                  limit="card"
+                  lines={2}
+                  className="mt-4 text-xl font-semibold leading-tight text-foreground transition group-hover:text-primary"
+                />
                 <p className="mt-4 text-xs uppercase tracking-[0.24em] text-muted-foreground">
                   {article.author} • {new Date(article.publishedAt).toLocaleDateString()}
                 </p>
@@ -320,9 +341,12 @@ export default async function HomePage() {
             </span>
             <div>
               <p className="text-xs font-black uppercase text-primary">{article.category}</p>
-              <h3 className="line-clamp-2 text-xl font-medium leading-tight text-foreground">
-                {article.title}
-              </h3>
+              <StoryHeadline
+                title={article.title}
+                limit="compact"
+                lines={2}
+                className="text-xl font-medium leading-tight text-foreground"
+              />
             </div>
           </Link>
         ))}
@@ -383,9 +407,13 @@ function SideRailStory({ article }: { article: Article }) {
       </div>
       <div>
         <StoryBadge article={article} />
-        <h2 className="mt-4 text-2xl font-medium leading-tight text-foreground transition group-hover:text-primary">
-          {article.title}
-        </h2>
+        <StoryHeadline
+          as="h2"
+          title={article.title}
+          limit="rail"
+          lines={3}
+          className="mt-4 text-2xl font-medium leading-tight text-foreground transition group-hover:text-primary"
+        />
         <StoryMeta
           category={article.category}
           readingTime={article.readingTime}
@@ -419,9 +447,12 @@ function GridStory({ article }: { article: Article }) {
         className="mt-6"
         linked={false}
       />
-      <h3 className="mt-5 text-2xl font-medium leading-tight text-foreground transition group-hover:text-primary">
-        {article.title}
-      </h3>
+      <StoryHeadline
+        title={article.title}
+        limit="card"
+        lines={2}
+        className="mt-5 text-2xl font-medium leading-tight text-foreground transition group-hover:text-primary"
+      />
     </NewsLink>
   )
 }

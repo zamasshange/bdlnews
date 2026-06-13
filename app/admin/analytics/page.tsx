@@ -1,11 +1,20 @@
+import { AnalyticsChart } from '@/components/admin/analytics-chart'
 import { PostHogAnalyticsPanel } from '@/components/admin/posthog-analytics-panel'
 import { ProtectedAdminPage } from '@/components/admin/protected-admin-page'
 import { AdminPageHeader, AdminTable, StatCard, Td, Th } from '@/components/admin/ui'
-import { getDashboardStats } from '@/lib/admin/data'
+import { getDashboardStats, getEditorialAnalytics, getViewsByDay } from '@/lib/admin/data'
 import { formatCount } from '@/lib/data'
 
 export default async function AnalyticsPage() {
-  const stats = await getDashboardStats()
+  const [stats, editorial, chartData, chart30] = await Promise.all([
+    getDashboardStats(),
+    getEditorialAnalytics(),
+    getViewsByDay(7),
+    getViewsByDay(30),
+  ])
+
+  const views30Total = chart30.reduce((sum, day) => sum + day.views, 0)
+
   return (
     <ProtectedAdminPage>
       <AdminPageHeader
@@ -22,21 +31,87 @@ export default async function AnalyticsPage() {
         />
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-4">
-        <StatCard label="Total Views" value={formatCount(stats.totalViews)} />
+        <StatCard label="Total Views" value={formatCount(stats.totalViews)} accent="primary" />
         <StatCard label="Views Today" value={formatCount(stats.todayViews)} />
-        <StatCard label="Monthly Views" value={formatCount(stats.totalViews)} />
-        <StatCard label="Active Readers" value={stats.activeReaders} />
+        <StatCard label="Views (30d)" value={formatCount(editorial.views30d)} />
+        <StatCard label="Approved Comments" value={editorial.approvedComments} accent="success" />
       </div>
-      <div className="mt-6">
+
+      <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_0.95fr]">
+        <div>
+          <h2 className="mb-4 text-lg font-semibold text-slate-950">Daily article views</h2>
+          <AnalyticsChart data={chartData} />
+          <p className="mt-3 text-sm text-slate-500">{formatCount(views30Total)} views recorded across the last 30 days.</p>
+        </div>
+
         <AdminTable>
-          <thead><tr><Th>Metric</Th><Th>Current Signal</Th></tr></thead>
+          <thead>
+            <tr>
+              <Th>Most viewed stories</Th>
+              <Th>Views</Th>
+            </tr>
+          </thead>
           <tbody>
-            <tr><Td>Most Viewed Articles</Td><Td>Populated from article_views</Td></tr>
-            <tr><Td>Trending Articles</Td><Td>Last 24h velocity</Td></tr>
-            <tr><Td>Reading Time</Td><Td>Tracked per view event</Td></tr>
-            <tr><Td>Traffic Sources</Td><Td>Stored from document.referrer</Td></tr>
-            <tr><Td>Device Types</Td><Td>Desktop, tablet, mobile</Td></tr>
-            <tr><Td>Countries / Cities</Td><Td>Stored with view event metadata</Td></tr>
+            {editorial.topArticles.length ? (
+              editorial.topArticles.map((article) => (
+                <tr key={article.slug}>
+                  <Td className="font-medium text-slate-950">{article.title}</Td>
+                  <Td>{formatCount(article.views)}</Td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <Td colSpan={2}>No article view ranking yet.</Td>
+              </tr>
+            )}
+          </tbody>
+        </AdminTable>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <AdminTable>
+          <thead>
+            <tr>
+              <Th>Traffic sources (30d)</Th>
+              <Th>Views</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {editorial.topSources.length ? (
+              editorial.topSources.map((row) => (
+                <tr key={row.source}>
+                  <Td>{row.source}</Td>
+                  <Td>{formatCount(row.views)}</Td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <Td colSpan={2}>Referrer data will appear from article view events.</Td>
+              </tr>
+            )}
+          </tbody>
+        </AdminTable>
+
+        <AdminTable>
+          <thead>
+            <tr>
+              <Th>Device types (30d)</Th>
+              <Th>Views</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {editorial.devices.length ? (
+              editorial.devices.map((row) => (
+                <tr key={row.device}>
+                  <Td className="capitalize">{row.device}</Td>
+                  <Td>{formatCount(row.views)}</Td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <Td colSpan={2}>Device data will appear from article view events.</Td>
+              </tr>
+            )}
           </tbody>
         </AdminTable>
       </div>

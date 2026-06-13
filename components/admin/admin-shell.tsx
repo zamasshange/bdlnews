@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { BarChart3, FileText, Folder, ImageIcon, LayoutDashboard, MessageSquare, Radio, Settings, Tags, UserPen, Users } from 'lucide-react'
+import { BarChart3, ExternalLink, FileText, ImageIcon, LayoutDashboard, MessageSquare, Radio, Settings, Tags, UserPen, Users } from 'lucide-react'
+import { AdminNavLink } from '@/components/admin/admin-nav-link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/logo'
@@ -36,7 +37,7 @@ export function AdminShell({
 }) {
   return (
     <div className="min-h-screen bg-[#f7f8fa] text-slate-950">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white lg:block">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white lg:flex lg:flex-col">
         <div className="border-b border-slate-200 p-5">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 overflow-hidden rounded-2xl bg-slate-100 p-2 shadow-inner">
@@ -50,16 +51,19 @@ export function AdminShell({
         </div>
         <nav className="grid gap-1 p-3">
           {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </Link>
+            <AdminNavLink key={item.href} href={item.href} label={item.label} icon={item.icon} />
           ))}
         </nav>
+        <div className="border-t border-slate-200 p-3">
+          <Link
+            href="/"
+            target="_blank"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary"
+          >
+            <ExternalLink className="size-4" />
+            View live site
+          </Link>
+        </div>
       </aside>
 
       <div className="lg:pl-64">

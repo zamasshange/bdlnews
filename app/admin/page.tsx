@@ -1,67 +1,109 @@
 import { AnalyticsChart } from '@/components/admin/analytics-chart'
 import { PostHogAnalyticsPanel } from '@/components/admin/posthog-analytics-panel'
+import {
+  DashboardHero,
+  DashboardPublishedTable,
+  DashboardQuickActions,
+  DashboardSidePanels,
+  DashboardStatsGrid,
+} from '@/components/admin/dashboard-panels'
 import { ProtectedAdminPage } from '@/components/admin/protected-admin-page'
-import { AdminPageHeader, AdminTable, StatCard, Td, Th } from '@/components/admin/ui'
-import { Logo } from '@/components/logo'
-import { getAdminCollections, getDashboardStats, getViewsByDay } from '@/lib/admin/data'
+import { AdminTable, Td, Th } from '@/components/admin/ui'
+import { getDashboardOverview, getViewsByDay } from '@/lib/admin/data'
 import { formatCount } from '@/lib/data'
 
 export default async function AdminDashboardPage() {
-  const [stats, collections, chartData] = await Promise.all([getDashboardStats(), getAdminCollections(), getViewsByDay()])
+  const [overview, chartData] = await Promise.all([getDashboardOverview(), getViewsByDay()])
 
   return (
     <ProtectedAdminPage>
-      <div className="mb-6 grid gap-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-[1fr_auto] md:items-end">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.3em] text-primary">BDL Newsroom</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">Dashboard</h1>
-          <p className="mt-3 max-w-2xl text-sm text-slate-500">
-            Publishing status, audience pulse, and editorial momentum for a modern newsroom.
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex h-20 w-32 items-center justify-center rounded-3xl bg-slate-100 p-3 shadow-inner">
-            <Logo className="h-full w-full object-contain" />
+      <div className="space-y-8">
+        <DashboardHero stats={overview.stats} wireCount={overview.wireCount} />
+        <DashboardQuickActions />
+        <DashboardStatsGrid stats={overview.stats} editorial={overview.editorial} />
+
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <PostHogAnalyticsPanel compact />
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-6">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-primary">Site output</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">Published stories on BDL News</h2>
+            </div>
+            <DashboardPublishedTable articles={overview.publishedArticles} />
           </div>
-          <div className="hidden flex-col text-right md:flex">
-            <p className="text-sm font-black uppercase tracking-[0.3em] text-primary">BDL</p>
-            <p className="text-sm text-slate-500">Editorial dashboard</p>
+
+          <DashboardSidePanels
+            recentDrafts={overview.recentDrafts}
+            pendingComments={overview.pendingComments}
+            liveUpdates={overview.liveUpdates}
+            topArticles={overview.editorial.topArticles}
+          />
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-primary">Audience</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">7-day article views</h2>
+            </div>
+            <AnalyticsChart data={chartData} />
           </div>
-          <a
-            href="/admin/articles/create"
-            className="inline-flex h-12 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-primary"
-          >
-            New article
-          </a>
-        </div>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Articles" value={stats.totalArticles} />
-        <StatCard label="Published" value={stats.publishedArticles} />
-        <StatCard label="Drafts" value={stats.draftArticles} />
-        <StatCard label="Scheduled" value={stats.scheduledArticles} />
-        <StatCard label="Breaking News" value={stats.breakingStories} />
-        <StatCard label="Authors" value={stats.totalAuthors} />
-        <StatCard label="Total Views" value={formatCount(stats.totalViews)} />
-        <StatCard label="Today's Views" value={formatCount(stats.todayViews)} hint={`${stats.activeReaders} active readers`} />
-      </div>
-      <div className="mt-8">
-        <PostHogAnalyticsPanel compact />
-      </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-        <AnalyticsChart data={chartData} />
-        <AdminTable>
-          <thead><tr><Th>Latest Published Stories</Th><Th>Status</Th><Th>Updated</Th></tr></thead>
-          <tbody>
-            {collections.articles.slice(0, 7).map((article: any) => (
-              <tr key={article.id}>
-                <Td className="font-semibold text-slate-950">{article.headline}</Td>
-                <Td>{article.status}</Td>
-                <Td>{new Date(article.updated_at).toLocaleString()}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </AdminTable>
+
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-primary">Traffic mix</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">Where readers come from</h2>
+            </div>
+            <AdminTable>
+              <thead>
+                <tr>
+                  <Th>Source</Th>
+                  <Th>Views (30d)</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {overview.editorial.topSources.length ? (
+                  overview.editorial.topSources.map((row) => (
+                    <tr key={row.source}>
+                      <Td className="font-medium text-slate-950">{row.source}</Td>
+                      <Td>{formatCount(row.views)}</Td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <Td colSpan={2}>Referrer data will appear as article views are recorded.</Td>
+                  </tr>
+                )}
+              </tbody>
+            </AdminTable>
+
+            <AdminTable>
+              <thead>
+                <tr>
+                  <Th>Device</Th>
+                  <Th>Views (30d)</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {overview.editorial.devices.length ? (
+                  overview.editorial.devices.map((row) => (
+                    <tr key={row.device}>
+                      <Td className="capitalize">{row.device}</Td>
+                      <Td>{formatCount(row.views)}</Td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <Td colSpan={2}>Device breakdown will populate from tracked views.</Td>
+                  </tr>
+                )}
+              </tbody>
+            </AdminTable>
+          </div>
+        </section>
       </div>
     </ProtectedAdminPage>
   )

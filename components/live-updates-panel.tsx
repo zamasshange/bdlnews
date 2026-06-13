@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { hasSupabaseConfig } from '@/lib/supabase/config'
 import type { LiveItem } from '@/lib/data'
+import { headlineLimits, shortHeadline } from '@/lib/headlines'
 
 export function LiveUpdatesPanel({ initialItems }: { initialItems: LiveItem[] }) {
   const [items, setItems] = useState(initialItems)
@@ -38,7 +39,9 @@ export function LiveUpdatesPanel({ initialItems }: { initialItems: LiveItem[] })
         >
           <span className="font-mono text-xs text-muted-foreground">{item.time}</span>
           <span className="text-xs font-black uppercase text-primary">{item.status}</span>
-          <p className="text-sm font-semibold text-foreground">{item.headline}</p>
+          <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+            {shortHeadline(item.headline, headlineLimits.compact)}
+          </p>
         </div>
       ))}
     </div>

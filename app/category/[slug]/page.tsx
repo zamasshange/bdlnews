@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft, ArrowUpRight, Sparkles } from 'lucide-react'
 import { ArticleCard } from '@/components/article-card'
+import { StoryHeadline } from '@/components/story-headline'
 import { SiteShell } from '@/components/site-shell'
 import { JsonLd } from '@/components/seo/json-ld'
 import { NAV_LINKS } from '@/lib/data'
@@ -112,11 +113,15 @@ export default async function CategoryPage({
                 Lead Story / {lead.readingTime} Min
               </p>
               <Link href={`/article/${lead.slug}`} className="group">
-                <h2 className="text-4xl font-semibold leading-tight text-foreground transition group-hover:text-primary md:text-5xl">
-                  {lead.title}
-                </h2>
+                <StoryHeadline
+                  as="h2"
+                  title={lead.title}
+                  limit="hero"
+                  lines={2}
+                  className="text-4xl font-semibold leading-tight text-foreground transition group-hover:text-primary md:text-5xl"
+                />
               </Link>
-              <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
+              <p className="mt-5 max-w-xl line-clamp-3 text-base leading-relaxed text-muted-foreground">
                 {lead.dek}
               </p>
               <Link

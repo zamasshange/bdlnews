@@ -37,16 +37,27 @@ export function StatCard({
   value,
   hint,
   className,
+  accent = 'default',
 }: {
   label: string
   value: string | number
   hint?: string
   className?: string
+  accent?: 'default' | 'primary' | 'success' | 'warning'
 }) {
+  const accentClass =
+    accent === 'primary'
+      ? 'border-primary/20 bg-gradient-to-br from-primary/5 to-white'
+      : accent === 'success'
+        ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white'
+        : accent === 'warning'
+          ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-white'
+          : 'border-slate-200 bg-white'
+
   return (
-    <div className={cn('rounded-lg border border-slate-200 bg-white p-5 shadow-sm', className)}>
-      <p className="text-xs font-black uppercase text-slate-500">{label}</p>
-      <p className="mt-3 text-3xl font-semibold text-slate-950">{value}</p>
+    <div className={cn('rounded-2xl border p-5 shadow-sm', accentClass, className)}>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{label}</p>
+      <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
       {hint && <p className="mt-2 text-sm text-slate-500">{hint}</p>}
     </div>
   )
@@ -66,8 +77,20 @@ export function Th({ children }: { children: React.ReactNode }) {
   return <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black uppercase text-slate-500">{children}</th>
 }
 
-export function Td({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <td className={cn('border-b border-slate-100 px-4 py-3 align-top text-slate-700', className)}>{children}</td>
+export function Td({
+  children,
+  className,
+  colSpan,
+}: {
+  children: React.ReactNode
+  className?: string
+  colSpan?: number
+}) {
+  return (
+    <td colSpan={colSpan} className={cn('border-b border-slate-100 px-4 py-3 align-top text-slate-700', className)}>
+      {children}
+    </td>
+  )
 }
 
 export function Field({

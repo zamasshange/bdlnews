@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { breakingTicker } from '@/lib/data'
+import { headlineLimits, shortHeadline } from '@/lib/headlines'
 
 export function BreakingTicker() {
   const [ticker, setTicker] = useState(breakingTicker)
@@ -11,14 +12,18 @@ export function BreakingTicker() {
     fetch('/api/external-news?provider=all')
       .then((res) => res.json())
       .then((payload) => {
-        const headlines = payload.articles?.map((item: { title: string }) => item.title).filter(Boolean)
+        const headlines = payload.articles
+          ?.map((item: { title: string }) => shortHeadline(item.title, headlineLimits.ticker))
+          .filter(Boolean)
         if (headlines?.length) setTicker(headlines)
       })
       .catch(() => {
         fetch('/api/live-updates')
           .then((res) => res.json())
           .then((payload) => {
-            const headlines = payload.updates?.map((item: { headline: string }) => item.headline).filter(Boolean)
+            const headlines = payload.updates
+              ?.map((item: { headline: string }) => shortHeadline(item.headline, headlineLimits.ticker))
+              .filter(Boolean)
             if (headlines?.length) setTicker(headlines)
           })
           .catch(() => undefined)

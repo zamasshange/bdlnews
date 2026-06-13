@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'motion/react'
 import { type Article, timeAgo } from '@/lib/data'
+import { StoryHeadline } from '@/components/story-headline'
 import { cn } from '@/lib/utils'
 
 export function ArticleCard({
@@ -35,14 +36,15 @@ export function ArticleCard({
           />
         </div>
         <div className="pt-4">
-          <h3
+          <StoryHeadline
+            title={article.title}
+            limit="card"
+            lines={2}
             className={cn(
               'font-medium leading-tight text-foreground transition group-hover:text-primary',
               size === 'lg' ? 'text-3xl md:text-4xl' : 'text-2xl',
             )}
-          >
-            {article.title}
-          </h3>
+          />
           <p className="mt-3 text-xs uppercase tracking-[0.24em] text-muted-foreground">
             {timeAgo(article.publishedAt)}
           </p>
