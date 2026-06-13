@@ -11,9 +11,7 @@ import {
   categoryLabelFromSlug,
   getCategoryFetchConfig,
 } from '@/lib/category-external'
-import { enrichSyndicatedArticle } from '@/lib/syndicated-enrich'
 import { getCachedSyndicatedArticles, getSyndicatedArticleFromCache, persistSyndicatedArticles } from '@/lib/syndicated-cache'
-import { looksTruncated } from '@/lib/article-extractor'
 import type { ArticleRow } from '@/lib/supabase/types'
 
 const categoryFallback: Category = 'World'
@@ -150,19 +148,24 @@ export async function getExternalNewsItems(query?: string, limit = 12): Promise<
   return articles
 }
 
-const cachedExternalNews = cache(async () => fetchAllExternalArticles(500))
-
-export async function findExternalArticleBySlug(slug: string) {
+async function findExternalArticleBySlug(slug: string) {
   if (!slug.startsWith('ext-')) return undefined
 
   const cached = await getSyndicatedArticleFromCache(slug)
   if (cached) return cached
 
-  const articles = await cachedExternalNews()
-  const found = articles.find((article) => article.slug === slug)
-  if (found) {
-    await persistSyndicatedArticles([found])
-    return found
+  try {
+    const results = await fetchExternalNews({ provider: 'all' })
+    for (const item of results.slice(0, 100)) {
+      if (!item.url || !item.title) continue
+      const mapped = mapExternalNewsItem(item)
+      if (mapped.slug === slug) {
+        void persistSyndicatedArticles([mapped])
+        return mapped
+      }
+    }
+  } catch {
+    return undefined
   }
 
   return undefined
@@ -284,19 +287,9 @@ export async function getPublishedArticles(limit = 50): Promise<Article[]> {
   return data.map((row) => mapArticle(row as ArticleRow))
 }
 
-export async function getArticleBySlug(slug: string): Promise<Article | undefined> {
+export const getArticleBySlug = cache(async function getArticleBySlug(slug: string): Promise<Article | undefined> {
   if (slug.startsWith('ext-')) {
-    const cached = await getSyndicatedArticleFromCache(slug)
-    if (cached) {
-      const words = (cached.content ?? '').split(/\s+/).filter(Boolean).length
-      if (words >= 120 && !looksTruncated(cached.content)) {
-        return cached
-      }
-      return enrichSyndicatedArticle(cached)
-    }
-
-    const external = await findExternalArticleBySlug(slug)
-    if (external) return enrichSyndicatedArticle(external)
+    return findExternalArticleBySlug(slug)
   }
 
   if (hasSupabaseAdminConfig()) {
@@ -323,7 +316,7 @@ export async function getArticleBySlug(slug: string): Promise<Article | undefine
   }
 
   return findExternalArticleBySlug(slug)
-}
+})
 
 export async function getLiveUpdates(limit = 20): Promise<LiveItem[]> {
   if (!hasSupabaseAdminConfig()) return []
