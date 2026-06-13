@@ -20,6 +20,7 @@ export type SyndicatedRecord = {
   category: string | null
   country: string | null
   cachedAt: string
+  enrichedAt?: string
 }
 
 function recordToArticle(record: SyndicatedRecord): Article {
@@ -46,7 +47,7 @@ function recordToArticle(record: SyndicatedRecord): Article {
   }
 }
 
-function articleToRecord(article: Article): SyndicatedRecord {
+function articleToRecord(article: Article, enriched = false): SyndicatedRecord {
   return {
     slug: article.slug,
     url: article.externalUrl ?? article.id ?? article.slug,
@@ -60,23 +61,38 @@ function articleToRecord(article: Article): SyndicatedRecord {
     category: article.category,
     country: article.region !== 'Global' ? article.region : null,
     cachedAt: new Date().toISOString(),
+    enrichedAt: enriched ? new Date().toISOString() : undefined,
   }
 }
 
+let memoryCache: Record<string, SyndicatedRecord> | null = null
+let memoryCacheAt = 0
+const MEMORY_CACHE_MS = 60_000
+
 async function readCache(): Promise<Record<string, SyndicatedRecord>> {
+  if (memoryCache && Date.now() - memoryCacheAt < MEMORY_CACHE_MS) {
+    return memoryCache
+  }
+
   if (!hasSupabaseAdminConfig()) return {}
 
   try {
     const supabase = createSupabaseAdminClient()
     const { data, error } = await supabase.from('settings').select('value').eq('key', SETTINGS_KEY).maybeSingle()
-    if (error || !data?.value || typeof data.value !== 'object' || Array.isArray(data.value)) return {}
-    return data.value as Record<string, SyndicatedRecord>
+    if (error || !data?.value || typeof data.value !== 'object' || Array.isArray(data.value)) {
+      memoryCache = {}
+      memoryCacheAt = Date.now()
+      return memoryCache
+    }
+    memoryCache = data.value as Record<string, SyndicatedRecord>
+    memoryCacheAt = Date.now()
+    return memoryCache
   } catch {
-    return {}
+    return memoryCache ?? {}
   }
 }
 
-export async function persistSyndicatedArticles(articles: Article[]) {
+export async function persistSyndicatedArticles(articles: Article[], enriched = false) {
   const wireArticles = articles.filter((article) => article.externalUrl)
   if (!wireArticles.length || !hasSupabaseAdminConfig()) return
 
@@ -84,7 +100,11 @@ export async function persistSyndicatedArticles(articles: Article[]) {
   const next = { ...existing }
 
   for (const article of wireArticles) {
-    next[article.slug] = articleToRecord(article)
+    const previous = existing[article.slug]
+    next[article.slug] = {
+      ...articleToRecord(article, enriched),
+      enrichedAt: enriched ? new Date().toISOString() : previous?.enrichedAt,
+    }
   }
 
   const sorted = Object.values(next).sort(
@@ -102,6 +122,8 @@ export async function persistSyndicatedArticles(articles: Article[]) {
       value: trimmed,
       updated_at: new Date().toISOString(),
     })
+    memoryCache = trimmed
+    memoryCacheAt = Date.now()
   } catch {
     // Cache is best-effort; live feed lookup still works.
   }
@@ -123,6 +145,11 @@ export async function getSyndicatedArticleFromCache(slug: string): Promise<Artic
   const record = cache[slug]
   if (!record) return undefined
   return recordToArticle(record)
+}
+
+export async function getSyndicatedRecord(slug: string): Promise<SyndicatedRecord | undefined> {
+  const cache = await readCache()
+  return cache[slug]
 }
 
 export async function getSyndicatedArticleByUrl(url: string): Promise<Article | undefined> {

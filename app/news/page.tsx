@@ -8,7 +8,7 @@ import { NAV_LINKS } from '@/lib/data'
 import { categoryPathFromName } from '@/lib/category-paths'
 import { buildPageMetadata } from '@/lib/seo'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 120
 
 export const metadata = buildPageMetadata({
   title: 'Latest News & Breaking Headlines',

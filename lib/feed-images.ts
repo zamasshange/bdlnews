@@ -44,6 +44,13 @@ export async function ensureArticleImage(article: Article): Promise<Article> {
 export async function ensureArticleImages(articles: Article[], limit = 40) {
   const targets = articles.slice(0, limit)
   const rest = articles.slice(limit)
-  const enriched = await Promise.all(targets.map((article) => ensureArticleImage(article)))
+  const enriched = targets.map((article) =>
+    hasRealImage(article.image)
+      ? article
+      : {
+          ...article,
+          image: categoryFallbackImage(article.category, article.slug),
+        },
+  )
   return [...enriched, ...rest]
 }

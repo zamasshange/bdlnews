@@ -13,6 +13,7 @@ import {
 } from '@/lib/category-external'
 import { enrichSyndicatedArticle } from '@/lib/syndicated-enrich'
 import { getCachedSyndicatedArticles, getSyndicatedArticleFromCache, persistSyndicatedArticles } from '@/lib/syndicated-cache'
+import { looksTruncated } from '@/lib/article-extractor'
 import type { ArticleRow } from '@/lib/supabase/types'
 
 const categoryFallback: Category = 'World'
@@ -285,6 +286,15 @@ export async function getPublishedArticles(limit = 50): Promise<Article[]> {
 
 export async function getArticleBySlug(slug: string): Promise<Article | undefined> {
   if (slug.startsWith('ext-')) {
+    const cached = await getSyndicatedArticleFromCache(slug)
+    if (cached) {
+      const words = (cached.content ?? '').split(/\s+/).filter(Boolean).length
+      if (words >= 120 && !looksTruncated(cached.content)) {
+        return cached
+      }
+      return enrichSyndicatedArticle(cached)
+    }
+
     const external = await findExternalArticleBySlug(slug)
     if (external) return enrichSyndicatedArticle(external)
   }
@@ -381,8 +391,16 @@ export async function getArticlesByCategorySlug(slug: string, limit = 50): Promi
     return ownArticles.slice(0, limit)
   }
 
-  const external = await fetchExternalNewsForCategorySlug(slug, limit)
-  return dedupeArticles([...ownArticles, ...external]).slice(0, limit)
+  const cached = await getCachedSyndicatedArticles(200)
+  const cachedMatches = cached.filter((article) => articleMatchesCategorySlug(slug, article))
+  const merged = dedupeArticles([...ownArticles, ...cachedMatches])
+
+  if (merged.length >= limit) {
+    return merged.slice(0, limit)
+  }
+
+  const external = await fetchExternalNewsForCategorySlug(slug, limit - merged.length)
+  return dedupeArticles([...merged, ...external]).slice(0, limit)
 }
 
 export async function getAuthorProfile(id: string) {

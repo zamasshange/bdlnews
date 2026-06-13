@@ -8,14 +8,46 @@ import {
   countResolvableTwitterLinks,
   mergeExtractedTweetUrls,
 } from '@/lib/social-embeds'
-import { persistSyndicatedArticles } from '@/lib/syndicated-cache'
+import { buildWireImageCaption } from '@/lib/article-extractor'
+import { getSyndicatedRecord, persistSyndicatedArticles } from '@/lib/syndicated-cache'
+
+function wordCount(content?: string | null) {
+  return (content ?? '').split(/\s+/).filter(Boolean).length
+}
+
+function recentlyEnriched(enrichedAt?: string) {
+  if (!enrichedAt) return false
+  return Date.now() - new Date(enrichedAt).getTime() < 1000 * 60 * 60 * 12
+}
 
 export async function enrichSyndicatedArticle(article: Article): Promise<Article> {
   if (!article.externalUrl) return article
 
   try {
+    const record = await getSyndicatedRecord(article.slug)
     let content = article.content ?? article.dek ?? ''
     let imageCredit = article.imageCredit
+    const words = wordCount(content)
+    const complete = words >= 180 && !looksTruncated(content)
+
+    if (complete && recentlyEnriched(record?.enrichedAt)) {
+      return {
+        ...article,
+        content,
+        dek: article.dek || content.split(/\n{2,}/)[0]?.slice(0, 280) || article.title,
+        readingTime: Math.max(3, Math.ceil(words / 220)),
+      }
+    }
+
+    if (complete && !contentNeedsTwitterEnhancement(content)) {
+      return {
+        ...article,
+        content,
+        dek: article.dek || content.split(/\n{2,}/)[0]?.slice(0, 280) || article.title,
+        readingTime: Math.max(3, Math.ceil(words / 220)),
+      }
+    }
+
     const needsTwitterEnhancement = contentNeedsTwitterEnhancement(content)
     const shouldExtractFromSource = looksTruncated(content) || needsTwitterEnhancement
 
@@ -42,13 +74,12 @@ export async function enrichSyndicatedArticle(article: Article): Promise<Article
       }
     }
 
-    const words = content.split(/\s+/).filter(Boolean).length
     const enriched: Article = {
       ...article,
       content,
       dek: article.dek || content.split(/\n{2,}/)[0]?.slice(0, 280) || article.title,
       imageCredit: imageCredit || article.author,
-      readingTime: Math.max(3, Math.ceil(words / 220)),
+      readingTime: Math.max(3, Math.ceil(wordCount(content) / 220)),
     }
 
     if (looksTruncated(enriched.content)) {
@@ -59,7 +90,7 @@ export async function enrichSyndicatedArticle(article: Article): Promise<Article
       ].join('\n')
     }
 
-    await persistSyndicatedArticles([enriched])
+    await persistSyndicatedArticles([enriched], true)
     return enriched
   } catch {
     return article

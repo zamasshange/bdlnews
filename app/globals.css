@@ -214,3 +214,17 @@
 .live-dot {
   animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
+
+.article-body a:not([class*='font-black']):not([class*='inline-flex']) {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--primary) 45%, transparent);
+  text-underline-offset: 0.22em;
+  transition: color 150ms ease, text-decoration-color 150ms ease;
+}
+
+.article-body a:not([class*='font-black']):not([class*='inline-flex']):hover {
+  color: var(--foreground);
+  text-decoration-color: var(--primary);
+}

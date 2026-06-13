@@ -13,7 +13,7 @@ import {
 import { getPublishedArticles, getCategoryBySlug } from '@/lib/news'
 import { categoryMetadata } from '@/lib/seo'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 120
 
 const staticPages = {
   'about-us': {

@@ -15,7 +15,8 @@ import { AskSonkeCard } from '@/components/home/ask-sonke-card'
 import { CategoryQuickJump } from '@/components/home/category-quick-jump'
 import { buildExternalOnlyFeed, buildHomeFeed } from '@/lib/home-feed'
 import { categoryPathFromName } from '@/lib/category-paths'
-import { fetchAllExternalArticles, getLiveUpdates, getPublishedArticles, getTrendingArticles } from '@/lib/news'
+import { getCachedSyndicatedArticles } from '@/lib/syndicated-cache'
+import { getLiveUpdates, getPublishedArticles, getTrendingArticles } from '@/lib/news'
 import { headlineLimits, shortHeadline } from '@/lib/headlines'
 import { JsonLd } from '@/components/seo/json-ld'
 import { buildPageMetadata, homepageItemListJsonLd } from '@/lib/seo'
@@ -58,14 +59,14 @@ function NewsLink({
   )
 }
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 120
 
 export default async function HomePage() {
   const [articles, liveFeed, trendingArticles, externalArticles] = await Promise.all([
-    getPublishedArticles(),
+    getPublishedArticles(40),
     getLiveUpdates(),
     getTrendingArticles(),
-    fetchAllExternalArticles(500),
+    getCachedSyndicatedArticles(160),
   ])
 
   const feed = articles.length

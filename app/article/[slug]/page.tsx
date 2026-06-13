@@ -16,7 +16,7 @@ import { buildArticleContext } from '@/lib/article-text'
 import { getArticleBySlug, getPublishedArticles } from '@/lib/news'
 import { breadcrumbJsonLd, buildArticleMetadata, newsArticleJsonLd } from '@/lib/seo'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 180
 
 export function generateStaticParams() {
   return []
@@ -40,7 +40,7 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const [article, articles] = await Promise.all([getArticleBySlug(slug), getPublishedArticles()])
+  const [article, articles] = await Promise.all([getArticleBySlug(slug), getPublishedArticles(8)])
   if (!article) notFound()
 
   const contentBlocks = (() => {
