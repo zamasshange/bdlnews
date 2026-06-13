@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowUpRight, Clock, Sparkles } from 'lucide-react'
 import { ArticleCard } from '@/components/article-card'
 import { ArticleAiTools } from '@/components/article-ai-tools'
+import { ArticleBodyContent } from '@/components/article/article-body-content'
 import { ArticleHeroFigure } from '@/components/article-hero-figure'
 import { ArticleSourceCredit } from '@/components/article-source-credit'
 import { Comments } from '@/components/comments'
@@ -58,115 +59,6 @@ export default async function ArticlePage({
 
   const isWireStory = Boolean(article.externalUrl)
   const articleContext = buildArticleContext(article)
-
-  const renderBlock = (block: any, index: number) => {
-    switch (block.type) {
-      case 'heading':
-        return (
-          <h2 key={index} className="text-3xl font-semibold leading-tight text-foreground md:text-4xl">
-            {block.text}
-          </h2>
-        )
-      case 'subheading':
-        return (
-          <h3 key={index} className="text-2xl font-semibold leading-tight text-foreground md:text-3xl">
-            {block.text}
-          </h3>
-        )
-      case 'quote':
-        return (
-          <blockquote key={index} className="rounded-3xl border-l-4 border-primary bg-muted px-6 py-5 text-xl italic leading-8 text-foreground">
-            {block.text}
-          </blockquote>
-        )
-      case 'pull_quote':
-        return (
-          <div key={index} className="rounded-3xl border border-border bg-card p-6 text-lg font-semibold text-foreground">
-            {block.text}
-          </div>
-        )
-      case 'image':
-        return (
-          <figure key={index} className="overflow-hidden rounded-[2rem] bg-muted shadow-sm">
-            <img src={block.url || '/placeholder.jpg'} alt={block.alt || article.title} className="w-full object-cover" />
-            {block.caption && <figcaption className="border-t border-border bg-background px-4 py-3 text-sm text-muted-foreground">{block.caption}</figcaption>}
-          </figure>
-        )
-      case 'image_gallery':
-        return (
-          <div key={index} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {(block.items ?? []).map((src: string, itemIndex: number) => (
-              <div key={itemIndex} className="overflow-hidden rounded-3xl bg-muted">
-                <img src={src || '/placeholder.jpg'} alt={`${article.title} image ${itemIndex + 1}`} className="h-full w-full object-cover" />
-              </div>
-            ))}
-          </div>
-        )
-      case 'video':
-        return block.url ? (
-          <div key={index} className="overflow-hidden rounded-[2rem] bg-black">
-            <iframe
-              src={block.url}
-              title={block.caption || 'Embedded video'}
-              className="h-80 w-full"
-              allow="autoplay; encrypted-media; picture-in-picture"
-            />
-          </div>
-        ) : null
-      case 'fact_box':
-        return (
-          <div key={index} className="rounded-3xl border border-border bg-card p-6">
-            <p className="text-sm uppercase tracking-[0.3em] text-primary">Fact Box</p>
-            <p className="mt-3 text-base text-foreground">{block.text}</p>
-          </div>
-        )
-      case 'timeline':
-        return (
-          <div key={index} className="space-y-3 rounded-3xl border border-border bg-muted p-6">
-            <p className="text-sm uppercase tracking-[0.3em] text-primary">Timeline</p>
-            {Array.isArray(block.items)
-              ? block.items.map((item: string, itemIndex: number) => (
-                  <div key={itemIndex} className="rounded-2xl bg-background p-4 text-sm text-foreground">
-                    {item}
-                  </div>
-                ))
-              : null}
-          </div>
-        )
-      case 'statistics':
-        return (
-          <div key={index} className="grid gap-4 sm:grid-cols-2">
-            {Array.isArray(block.items)
-              ? block.items.map((stat: any, statIndex: number) => (
-                  <div key={statIndex} className="rounded-3xl border border-border bg-card p-5 text-sm text-foreground">
-                    <p className="font-black text-2xl">{stat.value}</p>
-                    <p className="mt-2 text-muted-foreground">{stat.label}</p>
-                  </div>
-                ))
-              : null}
-          </div>
-        )
-      case 'ai_summary':
-        return (
-          <div key={index} className="rounded-3xl border border-primary/40 bg-primary/5 p-6 text-sm leading-7 text-foreground">
-            <p className="font-semibold text-foreground">AI Summary</p>
-            <p className="mt-3">{block.text}</p>
-          </div>
-        )
-      case 'custom_html':
-        return (
-          <div key={index} className="prose rounded-3xl border border-border bg-muted p-6 text-foreground">
-            <div dangerouslySetInnerHTML={{ __html: block.html ?? '' }} />
-          </div>
-        )
-      default:
-        return (
-          <p key={index} className="text-lg leading-8 text-foreground">
-            {block.text}
-          </p>
-        )
-    }
-  }
 
   const categorySlug = article.category.toLowerCase().replace(/\s+/g, '-')
   const categoryHref = categoryPath(categorySlug)
@@ -322,40 +214,7 @@ export default async function ArticlePage({
           </aside>
 
           <div className="space-y-8 text-lg leading-8 text-foreground">
-            {(() => {
-              const paragraphs = (article.content ?? '')
-                .split(/\n{2,}/)
-                .filter(Boolean)
-              const showLead =
-                article.dek &&
-                !contentBlocks &&
-                !paragraphs.some((paragraph) => paragraph.trim() === article.dek?.trim())
-
-              return showLead ? (
-                <p className="border-l-4 border-primary pl-5 text-xl leading-relaxed text-foreground md:text-2xl">
-                  {article.dek}
-                </p>
-              ) : null
-            })()}
-            {contentBlocks ? (
-              contentBlocks.map((block, index) => renderBlock(block, index))
-            ) : (article.content ?? '').trim() ? (
-              (article.content ?? '')
-                .split(/\n{2,}/)
-                .filter(Boolean)
-                .map((paragraph, index) => (
-                  <p key={index} className={isWireStory ? 'font-serif text-[1.05rem] leading-9 text-foreground/95' : undefined}>
-                    {paragraph}
-                  </p>
-                ))
-            ) : (
-              <div className="rounded-3xl border border-border bg-card p-8">
-                <p className="text-lg font-semibold text-foreground">This story is curated for you.</p>
-                <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                  Sonke can summarize this headline, explain the context, or help you filter the latest news into what matters most. Tap the assistant at the bottom-right to get the quick version.
-                </p>
-              </div>
-            )}
+            <ArticleBodyContent article={article} contentBlocks={contentBlocks} isWireStory={isWireStory} />
           </div>
 
         </section>
