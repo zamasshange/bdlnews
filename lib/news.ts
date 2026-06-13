@@ -12,6 +12,8 @@ import {
   getCategoryFetchConfig,
 } from '@/lib/category-external'
 import { getCachedSyndicatedArticles, getSyndicatedArticleFromCache, persistSyndicatedArticles } from '@/lib/syndicated-cache'
+import { needsSyndicatedBodyFetch } from '@/lib/syndicated-content'
+import { enrichSyndicatedArticleFast } from '@/lib/syndicated-enrich'
 import type { ArticleRow } from '@/lib/supabase/types'
 
 const categoryFallback: Category = 'World'
@@ -171,6 +173,13 @@ async function findExternalArticleBySlug(slug: string) {
   return undefined
 }
 
+async function resolveSyndicatedArticle(article: Article) {
+  if (!needsSyndicatedBodyFetch(article.content)) {
+    return article
+  }
+  return enrichSyndicatedArticleFast(article, 9000)
+}
+
 function estimateReadingTime(content?: string | null) {
   const words = (content ?? '').trim().split(/\s+/).filter(Boolean).length
   return Math.max(3, Math.ceil(words / 220))
@@ -289,7 +298,9 @@ export async function getPublishedArticles(limit = 50): Promise<Article[]> {
 
 export const getArticleBySlug = cache(async function getArticleBySlug(slug: string): Promise<Article | undefined> {
   if (slug.startsWith('ext-')) {
-    return findExternalArticleBySlug(slug)
+    const article = await findExternalArticleBySlug(slug)
+    if (!article) return undefined
+    return resolveSyndicatedArticle(article)
   }
 
   if (hasSupabaseAdminConfig()) {

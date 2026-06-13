@@ -1,7 +1,12 @@
 'use client'
 
+import { ExternalLink } from 'lucide-react'
 import { FormattedParagraph } from '@/components/article/formatted-paragraph'
 import { splitParagraphs } from '@/lib/content-segments'
+import {
+  isPersistedStubContent,
+  needsSyndicatedBodyFetch,
+} from '@/lib/syndicated-content'
 import { cn } from '@/lib/utils'
 
 type ContentBlock = Record<string, unknown> & {
@@ -18,6 +23,25 @@ function paragraphClassName(isWireStory: boolean) {
   return cn(
     'text-lg leading-8 text-foreground',
     isWireStory && 'font-serif text-[1.05rem] leading-9 text-foreground/95',
+  )
+}
+
+function WireContinueReading({ url, source }: { url: string; source: string }) {
+  return (
+    <div className="rounded-3xl border border-primary/25 bg-primary/5 p-6 md:p-8">
+      <p className="text-sm leading-7 text-muted-foreground">
+        This summary is from the wire. Read the complete reporting at the original publisher.
+      </p>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-xs font-black uppercase text-primary-foreground transition hover:bg-primary/90"
+      >
+        Read full story on {source}
+        <ExternalLink className="size-4" />
+      </a>
+    </div>
   )
 }
 
@@ -106,18 +130,30 @@ export function ArticleBodyContent({
   article,
   contentBlocks,
   isWireStory,
+  externalUrl,
+  sourceName,
 }: {
   article: { title: string; dek?: string; content?: string | null }
   contentBlocks: ContentBlock[] | null
   isWireStory: boolean
+  externalUrl?: string | null
+  sourceName?: string
 }) {
-  const paragraphs = splitParagraphs(article.content ?? '')
+  const rawContent = article.content ?? ''
+  const paragraphs = splitParagraphs(rawContent).filter((paragraph) => !isPersistedStubContent(paragraph))
+  const showContinueReading = Boolean(
+    externalUrl && (needsSyndicatedBodyFetch(rawContent) || isPersistedStubContent(rawContent)),
+  )
   const showLead =
     article.dek &&
     !contentBlocks &&
     !paragraphs.some((paragraph) => paragraph.trim() === article.dek?.trim())
 
   const className = paragraphClassName(isWireStory)
+  const continueReading =
+    showContinueReading && externalUrl ? (
+      <WireContinueReading url={externalUrl} source={sourceName || 'the source'} />
+    ) : null
 
   if (contentBlocks?.length) {
     return (
@@ -128,11 +164,12 @@ export function ArticleBodyContent({
           </p>
         ) : null}
         {contentBlocks.map((block, index) => renderBlock(block, index, article.title, isWireStory))}
+        {continueReading}
       </div>
     )
   }
 
-  if ((article.content ?? '').trim()) {
+  if (paragraphs.length > 0) {
     return (
       <div className="article-body space-y-8">
         {showLead ? (
@@ -143,8 +180,13 @@ export function ArticleBodyContent({
         {paragraphs.map((paragraph, index) => (
           <FormattedParagraph key={index} text={paragraph} className={className} />
         ))}
+        {continueReading}
       </div>
     )
+  }
+
+  if (continueReading) {
+    return <div className="article-body space-y-8">{continueReading}</div>
   }
 
   return (

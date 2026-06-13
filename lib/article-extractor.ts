@@ -124,12 +124,13 @@ export async function extractOgImageFromUrl(url: string) {
   }
 }
 
-export function looksTruncated(text?: string | null) {
-  if (!text?.trim()) return true
-  const trimmed = text.trim()
-  if (trimmed.endsWith('...') || trimmed.endsWith('…')) return true
-  return trimmed.split(/\s+/).filter(Boolean).length < 90
-}
+export {
+  SYNDICATED_STUB_MARKER,
+  isPersistedStubContent,
+  looksTruncated,
+  needsSyndicatedBodyFetch,
+  syndicatedWordCount,
+} from '@/lib/syndicated-content'
 
 export function contentNeedsTwitterEnhancement(content?: string | null) {
   if (!content?.trim()) return false
@@ -145,7 +146,7 @@ export async function extractArticleBodyFromUrl(url: string) {
         Accept: 'text/html,application/xhtml+xml',
       },
       next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(8000),
     })
 
     if (!response.ok) return null

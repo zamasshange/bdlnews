@@ -214,7 +214,13 @@ export default async function ArticlePage({
           </aside>
 
           <div className="space-y-8 text-lg leading-8 text-foreground">
-            <ArticleBodyContent article={article} contentBlocks={contentBlocks} isWireStory={isWireStory} />
+            <ArticleBodyContent
+              article={article}
+              contentBlocks={contentBlocks}
+              isWireStory={isWireStory}
+              externalUrl={article.externalUrl}
+              sourceName={article.author}
+            />
           </div>
 
         </section>

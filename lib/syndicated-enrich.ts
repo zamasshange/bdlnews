@@ -1,19 +1,18 @@
 import type { Article } from '@/lib/data'
 import {
+  buildWireImageCaption,
   contentNeedsTwitterEnhancement,
   extractArticleBodyFromUrl,
+  isPersistedStubContent,
   looksTruncated,
+  needsSyndicatedBodyFetch,
+  syndicatedWordCount,
 } from '@/lib/article-extractor'
 import {
   countResolvableTwitterLinks,
   mergeExtractedTweetUrls,
 } from '@/lib/social-embeds'
-import { buildWireImageCaption } from '@/lib/article-extractor'
 import { getSyndicatedRecord, persistSyndicatedArticles } from '@/lib/syndicated-cache'
-
-function wordCount(content?: string | null) {
-  return (content ?? '').split(/\s+/).filter(Boolean).length
-}
 
 function recentlyEnriched(enrichedAt?: string) {
   if (!enrichedAt) return false
@@ -25,12 +24,12 @@ export async function enrichSyndicatedArticle(article: Article): Promise<Article
 
   try {
     const record = await getSyndicatedRecord(article.slug)
-    let content = article.content ?? article.dek ?? ''
+    let content = isPersistedStubContent(article.content) ? article.dek ?? '' : article.content ?? article.dek ?? ''
     let imageCredit = article.imageCredit
-    const words = wordCount(content)
-    const complete = words >= 180 && !looksTruncated(content)
+    const words = syndicatedWordCount(content)
+    const complete = words >= 180 && !looksTruncated(content) && !isPersistedStubContent(article.content)
 
-    if (complete && recentlyEnriched(record?.enrichedAt)) {
+    if (complete && recentlyEnriched(record?.enrichedAt) && !contentNeedsTwitterEnhancement(content)) {
       return {
         ...article,
         content,
@@ -49,14 +48,14 @@ export async function enrichSyndicatedArticle(article: Article): Promise<Article
     }
 
     const needsTwitterEnhancement = contentNeedsTwitterEnhancement(content)
-    const shouldExtractFromSource = looksTruncated(content) || needsTwitterEnhancement
+    const shouldExtractFromSource = needsSyndicatedBodyFetch(article.content) || needsTwitterEnhancement
 
     if (shouldExtractFromSource) {
       const extracted = await extractArticleBodyFromUrl(article.externalUrl)
       if (extracted?.content) {
         imageCredit = imageCredit || extracted.imageCredit
 
-        if (looksTruncated(content)) {
+        if (needsSyndicatedBodyFetch(article.content) || looksTruncated(content)) {
           content = extracted.content
         } else if (needsTwitterEnhancement) {
           const extractedTweetCount =
@@ -76,24 +75,34 @@ export async function enrichSyndicatedArticle(article: Article): Promise<Article
 
     const enriched: Article = {
       ...article,
-      content,
+      content: content.trim() || article.dek || article.title,
       dek: article.dek || content.split(/\n{2,}/)[0]?.slice(0, 280) || article.title,
       imageCredit: imageCredit || article.author,
-      readingTime: Math.max(3, Math.ceil(wordCount(content) / 220)),
-    }
-
-    if (looksTruncated(enriched.content)) {
-      enriched.content = [
-        enriched.dek,
-        '',
-        'This story continues on the original publisher. Use the link below to read the full reporting from the source newsroom.',
-      ].join('\n')
+      readingTime: Math.max(3, Math.ceil(syndicatedWordCount(content) / 220)),
     }
 
     await persistSyndicatedArticles([enriched], true)
     return enriched
   } catch {
     return article
+  }
+}
+
+export async function enrichSyndicatedArticleFast(article: Article, timeoutMs = 9000): Promise<Article> {
+  if (!article.externalUrl || !needsSyndicatedBodyFetch(article.content)) {
+    return article
+  }
+
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      enrichSyndicatedArticle(article),
+      new Promise<Article>((resolve) => {
+        timer = setTimeout(() => resolve(article), timeoutMs)
+      }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
   }
 }
 
