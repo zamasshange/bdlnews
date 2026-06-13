@@ -1,9 +1,9 @@
-import { getPublishedArticles } from '@/lib/news'
+import { getIndexableArticles } from '@/lib/seo-index'
 import { absoluteUrl, siteConfig } from '@/lib/site'
 import { truncateMetaDescription } from '@/lib/seo'
 
 export async function GET() {
-  const articles = await getPublishedArticles(100)
+  const articles = (await getIndexableArticles(120)).slice(0, 80)
   const feedUrl = absoluteUrl('/rss.xml')
 
   const items = articles

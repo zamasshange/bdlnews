@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Logo } from '@/components/logo'
 import { NAV_LINKS, SITE_LINKS, articles } from '@/lib/data'
+import { categoryPathFromName } from '@/lib/category-paths'
 
 export function SiteFooter() {
   return (
@@ -13,7 +14,7 @@ export function SiteFooter() {
             {NAV_LINKS.slice(1, 7).map((link) => (
               <Link
                 key={link}
-                href={`/category/${link.toLowerCase().replace(/\s+/g, '-')}`}
+                href={categoryPathFromName(link)}
                 className="text-xs font-black uppercase text-muted-foreground transition hover:text-primary"
               >
                 {link}

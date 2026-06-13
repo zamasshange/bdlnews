@@ -2,12 +2,20 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowUpRight } from 'lucide-react'
 import { ArticleCard } from '@/components/article-card'
+import { CategoryPageView } from '@/components/category/category-page-view'
 import { SiteShell } from '@/components/site-shell'
-import { getPublishedArticles } from '@/lib/news'
+import {
+  CATEGORY_SLUGS,
+  categoryPath,
+  categoryTitleFromSlug,
+  isCategorySlug,
+} from '@/lib/category-paths'
+import { getPublishedArticles, getCategoryBySlug } from '@/lib/news'
+import { categoryMetadata } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
 
-const pages = {
+const staticPages = {
   'about-us': {
     eyebrow: 'About BDL',
     title: 'News built for speed, context, and clarity.',
@@ -40,10 +48,13 @@ const pages = {
   },
 } as const
 
-type PageSlug = keyof typeof pages
+type StaticPageSlug = keyof typeof staticPages
 
 export function generateStaticParams() {
-  return Object.keys(pages).map((slug) => ({ slug }))
+  return [
+    ...CATEGORY_SLUGS.map((slug) => ({ slug })),
+    ...Object.keys(staticPages).map((slug) => ({ slug })),
+  ]
 }
 
 export async function generateMetadata({
@@ -52,7 +63,14 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const page = pages[slug as PageSlug]
+
+  if (isCategorySlug(slug)) {
+    const category = (await getCategoryBySlug(slug)) ?? { name: categoryTitleFromSlug(slug) }
+    if (!category.name) return {}
+    return categoryMetadata(slug, category.name)
+  }
+
+  const page = staticPages[slug as StaticPageSlug]
   if (!page) return {}
 
   return {
@@ -61,13 +79,18 @@ export async function generateMetadata({
   }
 }
 
-export default async function InfoPage({
+export default async function SlugPage({
   params,
 }: {
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const page = pages[slug as PageSlug]
+
+  if (isCategorySlug(slug)) {
+    return <CategoryPageView slug={slug} />
+  }
+
+  const page = staticPages[slug as StaticPageSlug]
   if (!page) notFound()
   const articles = await getPublishedArticles()
 
@@ -100,7 +123,7 @@ export default async function InfoPage({
             Stories To Open
           </h2>
           <Link
-            href="/category/ai-news"
+            href={categoryPath('ai-news')}
             className="mt-6 inline-flex items-center gap-2 text-xs font-black uppercase text-foreground transition hover:text-primary"
           >
             Explore AI News

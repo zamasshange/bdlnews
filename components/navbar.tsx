@@ -9,6 +9,7 @@ import { Logo } from '@/components/logo'
 import { SearchOverlay } from '@/components/search-overlay'
 import { Button } from '@/components/ui/button'
 import { NAV_LINKS } from '@/lib/data'
+import { categoryPathFromName } from '@/lib/category-paths'
 import { cn } from '@/lib/utils'
 
 export function Navbar() {
@@ -99,10 +100,7 @@ export function Navbar() {
 
           <nav className="no-scrollbar hidden items-center justify-between gap-1 overflow-x-auto py-3 lg:flex">
             {NAV_LINKS.map((label) => {
-              const href =
-                label === 'Home'
-                  ? '/'
-                  : `/category/${label.toLowerCase().replace(/\s+/g, '-')}`
+              const href = label === 'Home' ? '/' : categoryPathFromName(label)
               const active = pathname === href
               const isAi = label === 'AI News'
               return (
@@ -164,10 +162,7 @@ export function Navbar() {
               </div>
               <nav className="grid gap-1">
                 {NAV_LINKS.map((label) => {
-                  const href =
-                    label === 'Home'
-                      ? '/'
-                      : `/category/${label.toLowerCase().replace(/\s+/g, '-')}`
+                  const href = label === 'Home' ? '/' : categoryPathFromName(label)
                   return (
                     <Link
                       key={label}

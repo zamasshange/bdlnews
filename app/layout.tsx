@@ -5,6 +5,7 @@ import { AiAssistant } from '@/components/ai-assistant'
 import { PostHogProvider } from '@/components/providers/posthog-provider'
 import { JsonLd } from '@/components/seo/json-ld'
 import { buildPageMetadata, founderJsonLd, organizationJsonLd, websiteJsonLd } from '@/lib/seo'
+import { coreSearchKeywords } from '@/lib/seo-keywords'
 import { siteConfig } from '@/lib/site'
 import './globals.css'
 
@@ -19,7 +20,7 @@ const rootSeo = buildPageMetadata({
   title: `${siteConfig.name} — ${siteConfig.tagline}`,
   description: siteConfig.description,
   path: '/',
-  keywords: ['Breaking News', 'Latest News', 'South African News', 'African News', 'World News'],
+  keywords: [...coreSearchKeywords],
 })
 
 export const metadata: Metadata = {

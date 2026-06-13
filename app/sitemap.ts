@@ -1,37 +1,22 @@
 import type { MetadataRoute } from 'next'
-import { NAV_LINKS, SITE_LINKS } from '@/lib/data'
-import { getAuthorDirectory, getPublishedArticles } from '@/lib/news'
+import { getAuthorDirectory } from '@/lib/news'
+import { getIndexableArticles, getStaticIndexRoutes } from '@/lib/seo-index'
 import { absoluteUrl } from '@/lib/site'
 
-function slugify(value: string) {
-  return value.toLowerCase().replace(/\s+/g, '-')
-}
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [articles, authors] = await Promise.all([
-    getPublishedArticles(1000),
-    getAuthorDirectory(),
-  ])
+  const [articles, authors] = await Promise.all([getIndexableArticles(1500), getAuthorDirectory()])
 
-  const staticPages: MetadataRoute.Sitemap = [
-    { url: absoluteUrl('/'), changeFrequency: 'hourly', priority: 1 },
-    ...SITE_LINKS.map((link) => ({
-      url: absoluteUrl(link.href),
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    })),
-    ...NAV_LINKS.filter((item) => item !== 'Home').map((category) => ({
-      url: absoluteUrl(`/category/${slugify(category)}`),
-      changeFrequency: 'hourly' as const,
-      priority: 0.9,
-    })),
-  ]
+  const staticPages: MetadataRoute.Sitemap = getStaticIndexRoutes().map((route) => ({
+    url: route.url,
+    changeFrequency: route.changeFrequency,
+    priority: route.priority,
+  }))
 
   const articlePages: MetadataRoute.Sitemap = articles.map((article) => ({
     url: absoluteUrl(`/article/${article.slug}`),
     lastModified: new Date(article.updatedAt ?? article.publishedAt),
     changeFrequency: 'daily',
-    priority: 0.7,
+    priority: article.externalUrl ? 0.65 : 0.75,
   }))
 
   const authorPages: MetadataRoute.Sitemap = authors.map((author) => ({

@@ -35,7 +35,7 @@ export async function extractOgImageFromUrl(url: string) {
     const response = await fetch(url, {
       headers: {
         'User-Agent':
-          'Mozilla/5.0 (compatible; BDLNewsBot/1.0; +https://bdlnews.co.za) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Mozilla/5.0 (compatible; BDLNewsBot/1.0; +https://bdlnews.online) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         Accept: 'text/html,application/xhtml+xml',
       },
       next: { revalidate: 86400 },
@@ -98,7 +98,7 @@ export async function extractArticleBodyFromUrl(url: string) {
     const response = await fetch(url, {
       headers: {
         'User-Agent':
-          'Mozilla/5.0 (compatible; BDLNewsBot/1.0; +https://bdlnews.co.za) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Mozilla/5.0 (compatible; BDLNewsBot/1.0; +https://bdlnews.online) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         Accept: 'text/html,application/xhtml+xml',
       },
       next: { revalidate: 3600 },

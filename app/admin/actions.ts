@@ -46,7 +46,7 @@ async function requireConfigured() {
 function revalidateNews() {
   revalidatePath('/')
   revalidatePath('/article/[slug]', 'page')
-  revalidatePath('/category/[slug]', 'page')
+  revalidatePath('/[slug]', 'page')
 }
 
 export async function saveArticle(formData: FormData) {

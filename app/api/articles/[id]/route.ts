@@ -29,7 +29,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   revalidatePath('/')
   revalidatePath('/article/[slug]', 'page')
-  revalidatePath('/category/[slug]', 'page')
+  revalidatePath('/[slug]', 'page')
   return NextResponse.json({ article: data })
 }
 

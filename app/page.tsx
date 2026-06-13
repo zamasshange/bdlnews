@@ -14,9 +14,12 @@ import { StoryHeadline } from '@/components/story-headline'
 import { AskSonkeCard } from '@/components/home/ask-sonke-card'
 import { CategoryQuickJump } from '@/components/home/category-quick-jump'
 import { buildExternalOnlyFeed, buildHomeFeed } from '@/lib/home-feed'
+import { categoryPathFromName } from '@/lib/category-paths'
 import { fetchAllExternalArticles, getLiveUpdates, getPublishedArticles, getTrendingArticles } from '@/lib/news'
 import { headlineLimits, shortHeadline } from '@/lib/headlines'
-import { buildPageMetadata } from '@/lib/seo'
+import { JsonLd } from '@/components/seo/json-ld'
+import { buildPageMetadata, homepageItemListJsonLd } from '@/lib/seo'
+import { coreSearchKeywords } from '@/lib/seo-keywords'
 import { siteConfig } from '@/lib/site'
 
 export const metadata = {
@@ -26,12 +29,9 @@ export const metadata = {
     'BDL News delivers breaking news, latest headlines, South African news, African news, world news, business, technology, sports, entertainment, and current affairs — founded by Zama Shange.',
   path: '/',
   keywords: [
+    ...coreSearchKeywords,
     'Breaking News',
     'Latest News',
-    'News Today',
-    'Headlines Today',
-    'Live News Updates',
-    'Trending News',
     'South African News',
     'African News',
     'World News',
@@ -94,8 +94,13 @@ export default async function HomePage() {
         ? 'More stories across BDL and the wire'
         : 'Latest from the BDL newsroom'
 
+  const headlineArticles = [featured, secondFeature, featureTwo, ...sideStories, ...gridStories].filter(
+    (article): article is Article => Boolean(article),
+  )
+
   return (
     <SiteShell showTicker>
+      <JsonLd data={homepageItemListJsonLd(headlineArticles)} />
       <LivePulseBar
         mode={mode}
         ownCount={stats.ownCount}
@@ -368,7 +373,7 @@ function StoryMeta({
 }) {
   const categoryLabel = linked ? (
     <Link
-      href={`/category/${category.toLowerCase().replace(/\s+/g, '-')}`}
+      href={categoryPathFromName(category)}
       className="transition hover:text-primary"
     >
       {category}

@@ -14,6 +14,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/category/:slug',
+        destination: '/:slug',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig

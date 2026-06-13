@@ -10,7 +10,7 @@ import { Comments } from '@/components/comments'
 import { SiteShell } from '@/components/site-shell'
 import { ArticleViewTracker } from '@/components/tracking/article-view-tracker'
 import { JsonLd } from '@/components/seo/json-ld'
-import { buildArticleContext } from '@/lib/article-text'
+import { categoryPath, categoryPathFromName } from '@/lib/category-paths'
 import { getArticleBySlug, getPublishedArticles } from '@/lib/news'
 import { breadcrumbJsonLd, buildArticleMetadata, newsArticleJsonLd } from '@/lib/seo'
 
@@ -168,6 +168,7 @@ export default async function ArticlePage({
   }
 
   const categorySlug = article.category.toLowerCase().replace(/\s+/g, '-')
+  const categoryHref = categoryPath(categorySlug)
 
   return (
     <SiteShell showTicker>
@@ -176,7 +177,7 @@ export default async function ArticlePage({
           newsArticleJsonLd(article),
           breadcrumbJsonLd([
             { name: 'Home', path: '/' },
-            { name: article.category, path: `/category/${categorySlug}` },
+            { name: article.category, path: categoryHref },
             { name: article.title, path: `/article/${article.slug}` },
           ]),
         ]}
@@ -201,7 +202,7 @@ export default async function ArticlePage({
           <div className="grid gap-8 lg:grid-cols-[0.72fr_0.28fr] lg:items-end">
             <div>
               <Link
-                href={`/category/${article.category.toLowerCase().replace(/\s+/g, '-')}`}
+                href={categoryPathFromName(article.category)}
                 className="mb-4 inline-flex border border-border px-3 py-1.5 text-xs font-black uppercase text-primary transition hover:border-primary"
               >
                 {article.category}
@@ -387,7 +388,7 @@ export default async function ArticlePage({
 
       <section className="jox-container py-10">
         <Link
-          href={`/category/${article.category.toLowerCase().replace(/\s+/g, '-')}`}
+          href={categoryPathFromName(article.category)}
           className="inline-flex items-center gap-2 text-xs font-black uppercase text-foreground transition hover:text-primary"
         >
           More in {article.category}

@@ -5,59 +5,33 @@ import { ArticleCard } from '@/components/article-card'
 import { StoryHeadline } from '@/components/story-headline'
 import { SiteShell } from '@/components/site-shell'
 import { JsonLd } from '@/components/seo/json-ld'
-import { NAV_LINKS } from '@/lib/data'
+import { categoryPath, categoryTitleFromSlug } from '@/lib/category-paths'
 import { getArticlesByCategorySlug, getCategoryBySlug } from '@/lib/news'
 import { ensureArticleImages } from '@/lib/feed-images'
 import { getCategoryDisplay } from '@/lib/category-branding'
-import { breadcrumbJsonLd, categoryMetadata } from '@/lib/seo'
+import { breadcrumbJsonLd, categoryCollectionJsonLd } from '@/lib/seo'
 
-export const dynamic = 'force-dynamic'
-
-const categories = NAV_LINKS.filter((item) => item !== 'Home')
-
-function slugify(value: string) {
-  return value.toLowerCase().replace(/\s+/g, '-')
-}
-
-function titleFromSlug(slug: string) {
-  return categories.find((category) => slugify(category) === slug)
-}
-
-export function generateStaticParams() {
-  return categories.map((category) => ({ slug: slugify(category) }))
-}
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
-  const { slug } = await params
-  const category = (await getCategoryBySlug(slug)) ?? { name: titleFromSlug(slug) }
-  if (!category.name) return {}
-
-  return categoryMetadata(slug, category.name)
-}
-
-export default async function CategoryPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
-  const { slug } = await params
-  const category = (await getCategoryBySlug(slug)) ?? { name: titleFromSlug(slug) ?? 'Stories', slug }
+export async function CategoryPageView({ slug }: { slug: string }) {
+  const category = (await getCategoryBySlug(slug)) ?? {
+    name: categoryTitleFromSlug(slug) ?? 'Stories',
+    slug,
+  }
 
   const shownArticles = await ensureArticleImages(await getArticlesByCategorySlug(slug), 24)
   const lead = shownArticles[0]
   const display = getCategoryDisplay(slug, category.name)
+  const path = categoryPath(slug)
 
   return (
     <SiteShell showTicker>
       <JsonLd
-        data={breadcrumbJsonLd([
-          { name: 'Home', path: '/' },
-          { name: display.name, path: `/category/${slug}` },
-        ])}
+        data={[
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: display.name, path },
+          ]),
+          categoryCollectionJsonLd(slug, display.name, display.description, shownArticles),
+        ]}
       />
       <section className="jox-container py-8 md:py-12">
         <Link
@@ -70,7 +44,7 @@ export default async function CategoryPage({
 
         <div className="grid gap-8 border-b border-border pb-8 lg:grid-cols-[0.72fr_0.28fr] lg:items-end">
           <div>
-            <p className="mb-4 text-xs font-black uppercase text-primary">Category</p>
+            <p className="mb-4 text-xs font-black uppercase text-primary">{display.name}</p>
             <h1 className="text-5xl font-semibold leading-tight text-foreground md:text-6xl">
               {display.name}
             </h1>
@@ -138,7 +112,7 @@ export default async function CategoryPage({
             <p className="text-sm uppercase tracking-[0.3em] text-primary">{display.name}</p>
             <h2 className="mt-4 text-4xl font-semibold text-foreground">No stories available yet.</h2>
             <p className="mt-4 text-base leading-7 text-muted-foreground">
-              We don’t have any published stories in this category yet, but the page is ready and will update as new content arrives.
+              We don&apos;t have any published stories in this section yet, but the page is ready and will update as new content arrives.
             </p>
           </div>
         )}

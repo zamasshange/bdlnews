@@ -5,6 +5,7 @@ import { ArticleCard } from '@/components/article-card'
 import { SiteShell } from '@/components/site-shell'
 import { getPublishedArticles, getTrendingArticles } from '@/lib/news'
 import { NAV_LINKS } from '@/lib/data'
+import { categoryPathFromName } from '@/lib/category-paths'
 import { buildPageMetadata } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
@@ -44,7 +45,7 @@ export default async function NewsPage() {
             </p>
             <div className="mt-6 grid gap-3 text-sm uppercase text-foreground">
               {NAV_LINKS.slice(1).map((link) => (
-                <Link key={link} href={`/category/${link.toLowerCase().replace(/\s+/g, '-')}`} className="rounded-2xl border border-border px-3 py-2 transition hover:border-primary hover:text-primary">
+                <Link key={link} href={categoryPathFromName(link)} className="rounded-2xl border border-border px-3 py-2 transition hover:border-primary hover:text-primary">
                   {link}
                 </Link>
               ))}

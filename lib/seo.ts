@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import type { Article } from '@/lib/data'
 import { bdlSignalBranding, BDL_SIGNAL_SLUG } from '@/lib/category-branding'
+import { categoryPath } from '@/lib/category-paths'
+import { categorySearchKeywords, coreSearchKeywords } from '@/lib/seo-keywords'
 import { absoluteUrl, siteConfig } from '@/lib/site'
 
 function resolveImageUrl(image?: string) {
@@ -45,7 +47,7 @@ export function buildPageMetadata({
   const canonical = absoluteUrl(path)
   const metaDescription = truncateMetaDescription(description)
   const image = resolveImageUrl(ogImage)
-  const mergedKeywords = [...new Set([...siteConfig.keywords.slice(0, 12), ...keywords])]
+  const mergedKeywords = [...new Set([...coreSearchKeywords, ...siteConfig.keywords.slice(0, 12), ...keywords])]
 
   return {
     title,
@@ -54,12 +56,32 @@ export function buildPageMetadata({
     authors: authors?.map((name) => ({ name })),
     creator: siteConfig.founder.name,
     publisher: siteConfig.name,
+    metadataBase: new URL(siteConfig.url),
     robots: noIndex
       ? { index: false, follow: false }
-      : { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large' } },
+      : {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            'max-image-preview': 'large',
+            'max-snippet': -1,
+            'max-video-preview': -1,
+          },
+        },
     alternates: {
       canonical,
-      types: { 'application/rss+xml': absoluteUrl('/rss.xml') },
+      types: {
+        'application/rss+xml': [{ url: absoluteUrl('/rss.xml'), title: `${siteConfig.name} RSS` }],
+      },
+    },
+    verification: {
+      google: process.env.GOOGLE_SITE_VERIFICATION,
+      yandex: process.env.YANDEX_SITE_VERIFICATION,
+      other: process.env.BING_SITE_VERIFICATION
+        ? { 'msvalidate.01': process.env.BING_SITE_VERIFICATION }
+        : undefined,
     },
     openGraph: {
       title,
@@ -81,6 +103,7 @@ export function buildPageMetadata({
       creator: siteConfig.social.twitter,
       site: siteConfig.social.twitter,
     },
+    category: 'news',
   }
 }
 
@@ -145,7 +168,7 @@ export function websiteJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: siteConfig.name,
-    alternateName: siteConfig.organization.alternateName,
+    alternateName: [...siteConfig.organization.alternateName, siteConfig.domain],
     url: siteConfig.url,
     description: siteConfig.description,
     inLanguage: siteConfig.language,
@@ -158,6 +181,55 @@ export function websiteJsonLd() {
       },
       'query-input': 'required name=search_term_string',
     },
+  }
+}
+
+export function categoryCollectionJsonLd(
+  slug: string,
+  name: string,
+  description: string,
+  articles: Pick<Article, 'slug' | 'title' | 'publishedAt'>[],
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${name} News | ${siteConfig.name}`,
+    description,
+    url: absoluteUrl(categoryPath(slug)),
+    inLanguage: siteConfig.language,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: siteConfig.name,
+      url: siteConfig.url,
+    },
+    about: {
+      '@type': 'Thing',
+      name: `${name} News`,
+    },
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: articles.slice(0, 20).map((article, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: absoluteUrl(`/article/${article.slug}`),
+        name: article.title,
+      })),
+    },
+  }
+}
+
+export function homepageItemListJsonLd(articles: Pick<Article, 'slug' | 'title' | 'publishedAt' | 'category'>[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `Latest headlines from ${siteConfig.name}`,
+    url: siteConfig.url,
+    itemListElement: articles.slice(0, 12).map((article, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: absoluteUrl(`/article/${article.slug}`),
+      name: article.title,
+    })),
   }
 }
 
@@ -207,6 +279,14 @@ export function newsArticleJsonLd(article: Article) {
     keywords: (article.tags ?? []).join(', '),
     inLanguage: siteConfig.language,
     isAccessibleForFree: true,
+    ...(article.externalUrl
+      ? {
+          isBasedOn: {
+            '@type': 'CreativeWork',
+            url: article.externalUrl,
+          },
+        }
+      : {}),
   }
 }
 
@@ -247,30 +327,47 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
 
 export function categoryMetadata(slug: string, name: string): Metadata {
   const descriptions: Record<string, string> = {
-    world: 'Latest world news, international headlines, and global current affairs from BDL News — South Africa\'s independent digital news platform.',
-    politics: 'Politics news, policy updates, and government coverage from BDL News — breaking political headlines from South Africa, Africa, and the world.',
-    business: 'Business news, markets, economy, and corporate coverage from BDL News — trusted financial and industry reporting.',
-    technology: 'Technology news, AI updates, startups, and digital innovation coverage from BDL News — including ChatGPT, OpenAI, Gemini AI, and emerging tech.',
-    sports: 'Sports news, live updates, and match coverage from BDL News — latest headlines from South Africa, Africa, and global sport.',
-    entertainment: 'Entertainment news, culture, and trending stories from BDL News — the latest in film, music, and celebrity coverage.',
-    africa: 'African news, regional headlines, and continental current affairs from BDL News — independent reporting across Africa.',
-    opinion: 'Opinion and analysis on the biggest stories from BDL News — expert commentary on politics, business, technology, and culture.',
+    world: 'Latest world news, international headlines, and global current affairs on BDL News Online (bdlnews.online).',
+    politics: 'Politics news, policy updates, and government coverage on BDL News Online — breaking political headlines from South Africa, Africa, and the world.',
+    business: 'Business news, markets, economy, and corporate coverage on BDL News Online — trusted financial and industry reporting.',
+    technology: 'Technology news, AI updates, startups, and digital innovation on BDL News Online — including ChatGPT, OpenAI, Gemini AI, and emerging tech.',
+    sports: 'Sports news, live updates, and match coverage on BDL News Online — latest headlines from South Africa, Africa, and global sport.',
+    entertainment: 'Entertainment news, culture, and trending stories on BDL News Online — film, music, and celebrity coverage.',
+    africa: 'African news, regional headlines, and continental current affairs on BDL News Online — independent reporting across Africa.',
+    opinion: 'Opinion and analysis on the biggest stories from BDL News Online — expert commentary on politics, business, technology, and culture.',
     'ai-news': bdlSignalBranding.description,
+  }
+
+  const categoryKeywords: Record<string, string[]> = {
+    world: categorySearchKeywords.world,
+    politics: categorySearchKeywords.politics,
+    business: categorySearchKeywords.business,
+    technology: categorySearchKeywords.technology,
+    sports: categorySearchKeywords.sports,
+    entertainment: categorySearchKeywords.entertainment,
+    africa: categorySearchKeywords.africa,
+    opinion: categorySearchKeywords.opinion,
+    'ai-news': [...bdlSignalBranding.seoKeywords, ...coreSearchKeywords.slice(0, 6)],
   }
 
   if (slug === BDL_SIGNAL_SLUG) {
     return buildPageMetadata({
       title: bdlSignalBranding.title,
       description: bdlSignalBranding.description,
-      path: `/category/${slug}`,
-      keywords: [...bdlSignalBranding.seoKeywords],
+      path: categoryPath(slug),
+      keywords: [...bdlSignalBranding.seoKeywords, ...coreSearchKeywords],
     })
   }
 
   return buildPageMetadata({
     title: `${name} News`,
-    description: descriptions[slug] ?? `Latest ${name.toLowerCase()} news, headlines, and current affairs from BDL News.`,
-    path: `/category/${slug}`,
-    keywords: [name, `${name} News`, 'Latest News', 'Breaking News', 'BDL News'],
+    description: descriptions[slug] ?? `Latest ${name.toLowerCase()} news, headlines, and current affairs on BDL News Online (bdlnews.online).`,
+    path: categoryPath(slug),
+    keywords: [
+      name,
+      `${name} News`,
+      ...coreSearchKeywords,
+      ...(categoryKeywords[slug] ?? []),
+    ],
   })
 }
