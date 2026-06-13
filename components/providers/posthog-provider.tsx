@@ -5,8 +5,15 @@ import { Suspense, useEffect, useState } from 'react'
 import posthog from 'posthog-js'
 import { PostHogProvider as PHProvider } from 'posthog-js/react'
 
+function getProjectKey() {
+  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim() ?? ''
+  if (!key || key.includes('personal_api_key') || key.startsWith('phx_')) return ''
+  if (!key.startsWith('phc_')) return ''
+  return key
+}
+
 function initPostHog() {
-  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY
+  const apiKey = getProjectKey()
   if (!apiKey || typeof window === 'undefined' || posthog.__loaded) return Boolean(posthog.__loaded)
 
   posthog.init(apiKey, {
@@ -15,9 +22,6 @@ function initPostHog() {
     capture_pageview: false,
     capture_pageleave: true,
     persistence: 'localStorage+cookie',
-    loaded: (client) => {
-      if (process.env.NODE_ENV === 'development') client.debug()
-    },
   })
 
   return true
@@ -40,12 +44,13 @@ function PostHogPageView() {
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
+  const projectKey = getProjectKey()
 
   useEffect(() => {
     setReady(initPostHog())
   }, [])
 
-  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+  if (!projectKey) {
     return <>{children}</>
   }
 

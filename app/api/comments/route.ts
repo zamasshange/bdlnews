@@ -17,8 +17,8 @@ export async function GET(request: Request) {
     .eq('status', 'approved')
     .order('created_at', { ascending: true })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  return NextResponse.json({ comments: data })
+  if (error) return NextResponse.json({ comments: [] })
+  return NextResponse.json({ comments: data ?? [] })
 }
 
 export async function POST(request: Request) {

@@ -15,7 +15,7 @@ export async function PostHogAnalyticsPanel({ compact = false }: { compact?: boo
           {stats.error ?? 'Add NEXT_PUBLIC_POSTHOG_KEY or POSTHOG_API_KEY to your environment variables.'}
         </p>
         <p className="mt-3 text-xs">
-          Use a PostHog personal API key (`phx_...`) for dashboard queries. Pageview capture still works client-side with your project key.
+          Set `NEXT_PUBLIC_POSTHOG_KEY` to your project key (`phc_...`) for pageview capture, and `POSTHOG_API_KEY` to a personal API key (`phx_...`) for dashboard queries.
         </p>
       </div>
     )

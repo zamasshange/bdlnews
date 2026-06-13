@@ -3,6 +3,11 @@
 import { useEffect } from 'react'
 import { AnalyticsEvents, trackEvent } from '@/lib/analytics'
 
+function isDatabaseArticleId(articleId: string) {
+  if (!articleId || articleId.startsWith('ext-')) return false
+  return /^\d+$/.test(articleId) || /^[0-9a-f-]{36}$/i.test(articleId)
+}
+
 export function ArticleViewTracker({
   articleId,
   slug,
@@ -25,6 +30,8 @@ export function ArticleViewTracker({
       author,
       referrer: document.referrer || null,
     })
+
+    if (!isDatabaseArticleId(articleId)) return
 
     const startedAt = Date.now()
     const track = () => {
@@ -52,7 +59,7 @@ export function ArticleViewTracker({
 
     window.addEventListener('pagehide', track)
     return () => window.removeEventListener('pagehide', track)
-  }, [articleId])
+  }, [articleId, slug, title, category, author])
 
   return null
 }

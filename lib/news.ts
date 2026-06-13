@@ -6,6 +6,13 @@ import { type Article, type AuthorProfile, type Category, type LiveItem, NAV_LIN
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { fetchExternalNews, type ExternalNewsItem } from '@/lib/external-news'
+import {
+  articleMatchesCategorySlug,
+  categoryLabelFromSlug,
+  getCategoryFetchConfig,
+} from '@/lib/category-external'
+import { enrichSyndicatedArticle } from '@/lib/syndicated-enrich'
+import { getCachedSyndicatedArticles, getSyndicatedArticleFromCache, persistSyndicatedArticles } from '@/lib/syndicated-cache'
 import type { ArticleRow } from '@/lib/supabase/types'
 
 const categoryFallback: Category = 'World'
@@ -26,21 +33,23 @@ export function externalArticleSlug(url: string) {
   return `ext-${createHash('sha256').update(url).digest('hex').slice(0, 12)}`
 }
 
-function mapExternalNewsItem(row: ExternalNewsItem): Article {
+function mapExternalNewsItem(row: ExternalNewsItem, forcedCategory?: Category): Article {
   const title = row.title || 'Untitled story'
   const publishedAt = row.publishedAt || new Date().toISOString()
   const sourceName = row.source || 'Original publisher'
+  const body = row.content || row.description || ''
   return {
     id: row.url,
     slug: externalArticleSlug(row.url),
     title,
-    dek: row.description || '',
-    content: row.description || '',
-    category: toCategory(row.category ?? row.source ?? undefined),
+    dek: row.description || body.split(/\n{2,}/)[0]?.slice(0, 280) || title,
+    content: body,
+    category: forcedCategory ?? toCategory(row.category ?? undefined),
     image: row.imageUrl || '/placeholder.jpg',
+    imageCredit: sourceName,
     author: sourceName,
     authorRole: 'Syndicated source',
-    readingTime: Math.max(3, Math.ceil((row.description ?? '').split(/\s+/).filter(Boolean).length / 220)),
+    readingTime: Math.max(3, Math.ceil(body.split(/\s+/).filter(Boolean).length / 220)),
     publishedAt,
     region: row.country || 'Global',
     readers: 0,
@@ -51,19 +60,111 @@ function mapExternalNewsItem(row: ExternalNewsItem): Article {
   }
 }
 
-export async function getExternalNewsItems(query?: string, limit = 12): Promise<Article[]> {
-  const results = await fetchExternalNews({ provider: 'all', query })
-  return results
-    .filter((item) => item.title)
-    .slice(0, limit)
-    .map(mapExternalNewsItem)
+function dedupeArticles(articles: Article[]) {
+  const seen = new Set<string>()
+  return articles.filter((article) => {
+    if (seen.has(article.slug)) return false
+    seen.add(article.slug)
+    return Boolean(article.title)
+  })
 }
 
-const cachedExternalNews = cache(async (limit = 100) => getExternalNewsItems(undefined, limit))
+async function fetchExternalNewsForCategorySlug(slug: string, limit = 50): Promise<Article[]> {
+  const config = getCategoryFetchConfig(slug)
+  const label = categoryLabelFromSlug(slug)
+  if (!config || !label) return []
+
+  const attempts: ExternalNewsItem[] = []
+
+  const targeted = await fetchExternalNews({
+    provider: 'all',
+    category: config.newsdataCategory,
+    country: config.newsdataCountry,
+    topic: config.gnewsTopic,
+    mediastackCategory: config.mediastackCategory,
+    query: config.searchTerms[0],
+  })
+  attempts.push(...targeted)
+
+  for (const term of config.searchTerms.slice(0, 2)) {
+    if (attempts.length >= limit) break
+    const searched = await fetchExternalNews({ provider: 'all', query: term })
+    attempts.push(...searched)
+  }
+
+  const cached = await getCachedSyndicatedArticles(300)
+  const cachedMatches = cached.filter((article) => articleMatchesCategorySlug(slug, article))
+
+  const seen = new Set<string>()
+  const merged: Article[] = []
+
+  for (const item of attempts) {
+    if (!item.url || seen.has(item.url)) continue
+    seen.add(item.url)
+    merged.push(mapExternalNewsItem(item, label))
+    if (merged.length >= limit) break
+  }
+
+  for (const article of cachedMatches) {
+    if (seen.has(article.slug)) continue
+    seen.add(article.slug)
+    merged.push({ ...article, category: label })
+    if (merged.length >= limit) break
+  }
+
+  merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  await persistSyndicatedArticles(merged)
+  return merged.slice(0, limit)
+}
+
+export async function fetchAllExternalArticles(limit = 500): Promise<Article[]> {
+  const results = await fetchExternalNews({ provider: 'all' })
+  const seen = new Set<string>()
+  const articles: Article[] = []
+
+  for (const item of results) {
+    if (!item.title || !item.url || seen.has(item.url)) continue
+    seen.add(item.url)
+    articles.push(mapExternalNewsItem(item))
+    if (articles.length >= limit) break
+  }
+
+  await persistSyndicatedArticles(articles)
+  return articles
+}
+
+export async function getExternalNewsItems(query?: string, limit = 12): Promise<Article[]> {
+  const slug = query ? slugifyCategory(query) : ''
+  if (slug && getCategoryFetchConfig(slug)) {
+    return fetchExternalNewsForCategorySlug(slug, limit)
+  }
+
+  const results = await fetchExternalNews({ provider: 'all', query })
+  const articles = results
+    .filter((item) => item.title)
+    .slice(0, limit)
+    .map((item) => mapExternalNewsItem(item))
+
+  await persistSyndicatedArticles(articles)
+  return articles
+}
+
+const cachedExternalNews = cache(async () => fetchAllExternalArticles(500))
 
 export async function findExternalArticleBySlug(slug: string) {
-  const articles = await cachedExternalNews(100)
-  return articles.find((article) => article.slug === slug)
+  if (!slug.startsWith('ext-')) return undefined
+
+  const cached = await getSyndicatedArticleFromCache(slug)
+  if (cached) return cached
+
+  const articles = await cachedExternalNews()
+  const found = articles.find((article) => article.slug === slug)
+  if (found) {
+    await persistSyndicatedArticles([found])
+    return found
+  }
+
+  return undefined
 }
 
 function estimateReadingTime(content?: string | null) {
@@ -183,6 +284,11 @@ export async function getPublishedArticles(limit = 50): Promise<Article[]> {
 }
 
 export async function getArticleBySlug(slug: string): Promise<Article | undefined> {
+  if (slug.startsWith('ext-')) {
+    const external = await findExternalArticleBySlug(slug)
+    if (external) return enrichSyndicatedArticle(external)
+  }
+
   if (hasSupabaseAdminConfig()) {
     const supabase = createSupabaseAdminClient()
 
@@ -243,31 +349,40 @@ export async function getCategoryBySlug(slug: string) {
 }
 
 export async function getArticlesByCategorySlug(slug: string, limit = 50): Promise<Article[]> {
-  if (!hasSupabaseAdminConfig()) return []
-  const supabase = createSupabaseAdminClient()
-  if (supabaseNewsTable !== 'articles') {
-    const { data, error } = await supabase.from(supabaseNewsTable).select('*').limit(200)
-    if (error || !data) return []
-    const filtered = data
-      .map((row) => mapFlexibleArticle(row as Record<string, any>))
-      .filter((article) => slugifyCategory(article.category) === slug)
-      .slice(0, limit)
-    if (filtered.length) return filtered
-    const categoryName = NAV_LINKS.find((item) => slugifyCategory(item) === slug)
-    if (categoryName) return getExternalNewsItems(categoryName, limit)
-    return []
+  let ownArticles: Article[] = []
+
+  if (hasSupabaseAdminConfig()) {
+    const supabase = createSupabaseAdminClient()
+
+    if (supabaseNewsTable !== 'articles') {
+      const { data } = await supabase.from(supabaseNewsTable).select('*').limit(200)
+      if (data?.length) {
+        ownArticles = data
+          .map((row) => mapFlexibleArticle(row as Record<string, any>))
+          .filter((article) => slugifyCategory(article.category) === slug)
+      }
+    } else {
+      const { data } = await supabase
+        .from('articles')
+        .select('*, authors(*), categories!inner(*)')
+        .eq('categories.slug', slug)
+        .in('status', ['published', 'breaking'])
+        .lte('publish_date', new Date().toISOString())
+        .order('publish_date', { ascending: false, nullsFirst: false })
+        .limit(limit)
+
+      if (data?.length) {
+        ownArticles = data.map((row) => mapArticle(row as ArticleRow))
+      }
+    }
   }
 
-  const { data, error } = await supabase
-    .from('articles')
-    .select('*, authors(*), categories!inner(*)')
-    .eq('categories.slug', slug)
-    .in('status', ['published', 'breaking'])
-    .lte('publish_date', new Date().toISOString())
-    .order('publish_date', { ascending: false, nullsFirst: false })
-    .limit(limit)
-  if (error || !data) return []
-  return data.map((row) => mapArticle(row as ArticleRow))
+  if (ownArticles.length >= limit) {
+    return ownArticles.slice(0, limit)
+  }
+
+  const external = await fetchExternalNewsForCategorySlug(slug, limit)
+  return dedupeArticles([...ownArticles, ...external]).slice(0, limit)
 }
 
 export async function getAuthorProfile(id: string) {

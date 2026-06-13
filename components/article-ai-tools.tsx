@@ -58,15 +58,18 @@ export function ArticleAiTools({ article }: { article: Record<string, any> }) {
     <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.32em] text-primary">Sonke AI Tools</p>
-          <h2 className="mt-3 text-3xl font-semibold text-foreground">Explore this story beyond the headline</h2>
+          <p className="text-xs font-black uppercase tracking-[0.32em] text-primary">Sonke AI</p>
+          <h2 className="mt-3 text-3xl font-semibold text-foreground">Understand This Story</h2>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Sonke reads this article and helps you summarize it, explain it simply, and explore why it matters.
+          </p>
         </div>
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('sonke:ask', { detail: { message: 'Summarize the article for me.' } }))}
+          onClick={() => runTool('Summarize this article in 3 short bullet points.', 'Summarize Article')}
           className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-black uppercase text-primary-foreground transition hover:bg-primary/90"
         >
-          <Bot className="size-4" /> Ask Sonke
+          <Bot className="size-4" /> Understand This Story
         </button>
       </div>
 

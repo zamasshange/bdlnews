@@ -6,6 +6,7 @@ import { SiteShell } from '@/components/site-shell'
 import { JsonLd } from '@/components/seo/json-ld'
 import { NAV_LINKS } from '@/lib/data'
 import { getArticlesByCategorySlug, getCategoryBySlug } from '@/lib/news'
+import { ensureArticleImages } from '@/lib/feed-images'
 import { getCategoryDisplay } from '@/lib/category-branding'
 import { breadcrumbJsonLd, categoryMetadata } from '@/lib/seo'
 
@@ -45,7 +46,7 @@ export default async function CategoryPage({
   const { slug } = await params
   const category = (await getCategoryBySlug(slug)) ?? { name: titleFromSlug(slug) ?? 'Stories', slug }
 
-  const shownArticles = await getArticlesByCategorySlug(slug)
+  const shownArticles = await ensureArticleImages(await getArticlesByCategorySlug(slug), 24)
   const lead = shownArticles[0]
   const display = getCategoryDisplay(slug, category.name)
 

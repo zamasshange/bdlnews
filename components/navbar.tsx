@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { Menu, Search, X } from 'lucide-react'
+import { Menu, Search, Sparkles, X } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { SearchOverlay } from '@/components/search-overlay'
 import { Button } from '@/components/ui/button'
@@ -37,7 +37,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-xl">
+      <header className={cn('sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-xl', scrolled && 'nav-glow')}>
         <div className="jox-container">
           <div
             className={cn(
@@ -55,9 +55,20 @@ export function Navbar() {
               <Menu className="size-5" />
             </Button>
 
-            <Link href="/" aria-label="BDL News home" className="shrink-0">
-              <Logo className={cn(scrolled ? 'h-11 md:h-14' : 'h-14 md:h-18')} />
-            </Link>
+            <div className="flex min-w-0 items-center gap-4">
+              <Link href="/" aria-label="BDL News home" className="shrink-0">
+                <Logo className={cn(scrolled ? 'h-11 md:h-14' : 'h-14 md:h-18')} />
+              </Link>
+              <div className="hidden items-center gap-2 md:flex">
+                <span className="inline-flex items-center gap-2 border border-primary/25 bg-primary/8 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-primary">
+                  <span className="live-dot size-2 rounded-full bg-primary" />
+                  Live
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground">
+                  Africa&apos;s AI newsroom
+                </span>
+              </div>
+            </div>
 
             <div className="flex items-center gap-2">
               <Button
@@ -69,6 +80,14 @@ export function Navbar() {
               >
                 <Search className="size-5" />
               </Button>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('sonke:ask', { detail: { message: 'What are the biggest stories right now?' } }))}
+                className="hidden items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-foreground transition hover:border-primary hover:text-primary sm:inline-flex"
+              >
+                <Sparkles className="size-4 text-primary" />
+                Ask Sonke
+              </button>
               <Link
                 href="#subscribe"
                 className="hidden bg-primary px-4 py-2 text-xs font-black uppercase text-primary-foreground transition hover:bg-foreground sm:inline-flex"
@@ -85,16 +104,20 @@ export function Navbar() {
                   ? '/'
                   : `/category/${label.toLowerCase().replace(/\s+/g, '-')}`
               const active = pathname === href
+              const isAi = label === 'AI News'
               return (
                 <Link
                   key={label}
                   href={href}
                   className={cn(
-                    'relative px-3 py-1 text-[12px] font-black uppercase tracking-wide text-muted-foreground transition hover:text-primary',
+                    'relative px-3 py-1 text-[12px] font-black uppercase tracking-wide transition',
+                    isAi
+                      ? 'text-primary hover:text-primary'
+                      : 'text-muted-foreground hover:text-primary',
                     active && 'text-primary',
                   )}
                 >
-                  {label}
+                  {isAi ? 'BDL Signal' : label}
                   {active && (
                     <motion.span
                       layoutId="nav-active"

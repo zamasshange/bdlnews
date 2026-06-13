@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowUpRight, Clock, Sparkles } from 'lucide-react'
 import { ArticleCard } from '@/components/article-card'
 import { ArticleAiTools } from '@/components/article-ai-tools'
+import { ArticleHeroFigure } from '@/components/article-hero-figure'
 import { ArticleSourceCredit } from '@/components/article-source-credit'
 import { Comments } from '@/components/comments'
 import { SiteShell } from '@/components/site-shell'
@@ -31,35 +32,31 @@ export async function generateMetadata({
   return buildArticleMetadata(article)
 }
 
- export default async function ArticlePage({
-   params,
- }: {
-   params: Promise<{ slug: string }>
- }) {
-   const { slug } = await params
-   const [article, articles] = await Promise.all([getArticleBySlug(slug), getPublishedArticles()])
-   if (!article) notFound()
+export default async function ArticlePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  const [article, articles] = await Promise.all([getArticleBySlug(slug), getPublishedArticles()])
+  if (!article) notFound()
 
-   // For external articles, ensure we have displayable content
-   const processedContent = article.externalUrl && !(article.content ?? '').trim()
-     ? article.dek || article.title
-     : article.content
+  const contentBlocks = (() => {
+    try {
+      const parsed = JSON.parse(article.content ?? '')
+      return Array.isArray(parsed) ? parsed : null
+    } catch {
+      return null
+    }
+  })()
 
-   const contentBlocks = (() => {
-     try {
-       const parsed = JSON.parse(processedContent ?? '')
-       return Array.isArray(parsed) ? parsed : null
-     } catch {
-       return null
-     }
-   })()
+  const related = articles
+    .filter((item) => item.slug !== article.slug && item.category === article.category)
+    .concat(articles.filter((item) => item.slug !== article.slug && item.category !== article.category))
+    .slice(0, 3)
 
-   const related = articles
-     .filter((item) => item.slug !== article.slug && item.category === article.category)
-     .concat(articles.filter((item) => item.slug !== article.slug && item.category !== article.category))
-     .slice(0, 3)
-
-   const articleContext = buildArticleContext(article)
+  const isWireStory = Boolean(article.externalUrl)
+  const articleContext = buildArticleContext(article)
 
   const renderBlock = (block: any, index: number) => {
     switch (block.type) {
@@ -209,6 +206,11 @@ export async function generateMetadata({
               >
                 {article.category}
               </Link>
+              {isWireStory ? (
+                <span className="mb-4 ml-2 inline-flex border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-black uppercase text-primary">
+                  Wire Story
+                </span>
+              ) : null}
               <h1 className="max-w-5xl text-5xl font-semibold leading-tight text-foreground md:text-6xl">
                 {article.title}
               </h1>
@@ -220,22 +222,25 @@ export async function generateMetadata({
             <aside className="border border-border bg-card p-5">
               <p className="mb-4 flex items-center gap-2 text-xs font-black uppercase text-primary">
                 <Sparkles className="size-4" />
-                AI Brief
+                {isWireStory ? 'Wire Brief' : 'AI Brief'}
               </p>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                BDL AI tracks this story across live updates, source confidence, and reader
-                interest so you can understand the main point without losing the context.
+                {isWireStory
+                  ? `This story is syndicated from ${article.author}. BDL presents the reporting with source credit and a direct link to the original publisher.`
+                  : 'BDL AI tracks this story across live updates, source confidence, and reader interest so you can understand the main point without losing the context.'}
               </p>
-              <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border pt-4 text-xs uppercase text-muted-foreground">
-                <div>
-                  <p className="font-black text-foreground">{article.engagement}%</p>
-                  <p>Signal</p>
+              {!isWireStory ? (
+                <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border pt-4 text-xs uppercase text-muted-foreground">
+                  <div>
+                    <p className="font-black text-foreground">{article.engagement}%</p>
+                    <p>Signal</p>
+                  </div>
+                  <div>
+                    <p className="font-black text-foreground">+{article.trendDelta}%</p>
+                    <p>Trend</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-black text-foreground">+{article.trendDelta}%</p>
-                  <p>Trend</p>
-                </div>
-              </div>
+              ) : null}
             </aside>
           </div>
         </header>
@@ -245,27 +250,7 @@ export async function generateMetadata({
         </section>
 
         <section className="jox-container space-y-6 pb-10">
-          <div className="overflow-hidden rounded-[2rem] bg-muted shadow-2xl shadow-black/5">
-            <div className="relative aspect-square sm:aspect-[4/3]">
-              <Image
-                src={article.image || '/placeholder.jpg'}
-                alt={article.title}
-                fill
-                priority
-                unoptimized={article.image?.startsWith('http')}
-                sizes="(max-width: 1280px) 100vw, 1280px"
-                className="object-cover transition duration-700 ease-out hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute left-6 bottom-6 rounded-3xl border border-white/15 bg-black/60 p-4 text-white shadow-xl shadow-black/20">
-                <p className="text-xs uppercase tracking-[0.32em] text-white/70">{article.category}</p>
-                <p className="mt-2 text-sm text-white/80">{article.region}</p>
-                <p className="mt-3 text-sm leading-relaxed text-white/75">
-                  {article.imageCredit ? `Image credit: ${article.imageCredit}` : 'Visual dispatch from the BDL newsroom.'}
-                </p>
-              </div>
-            </div>
-          </div>
+          <ArticleHeroFigure article={article} />
 
           {article.gallery?.length ? (
             <div className="grid gap-4 sm:grid-cols-3">
@@ -305,56 +290,72 @@ export async function generateMetadata({
             </p>
             <p className="text-sm">{new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
             <div className="rounded-3xl border border-border bg-card p-4 text-sm text-foreground">
-              <p className="font-black uppercase tracking-[0.32em] text-primary">Impact</p>
+              <p className="font-black uppercase tracking-[0.32em] text-primary">{isWireStory ? 'Source' : 'Impact'}</p>
               <div className="mt-4 grid gap-3 text-foreground">
-                <div className="flex items-center justify-between border-b border-border pb-3">
-                  <span>Signal</span>
-                  <span className="font-semibold">{article.engagement}%</span>
-                </div>
-                <div className="flex items-center justify-between pt-3 text-foreground">
-                  <span>Trend</span>
-                  <span className="font-semibold">+{article.trendDelta}%</span>
-                </div>
+                {isWireStory ? (
+                  <>
+                    <div className="flex items-center justify-between border-b border-border pb-3">
+                      <span>Publisher</span>
+                      <span className="font-semibold">{article.author}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-3">
+                      <span>Region</span>
+                      <span className="font-semibold">{article.region}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between border-b border-border pb-3">
+                      <span>Signal</span>
+                      <span className="font-semibold">{article.engagement}%</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-3 text-foreground">
+                      <span>Trend</span>
+                      <span className="font-semibold">+{article.trendDelta}%</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </aside>
 
           <div className="space-y-8 text-lg leading-8 text-foreground">
+            {(() => {
+              const paragraphs = (article.content ?? '')
+                .split(/\n{2,}/)
+                .filter(Boolean)
+              const showLead =
+                article.dek &&
+                !contentBlocks &&
+                !paragraphs.some((paragraph) => paragraph.trim() === article.dek?.trim())
+
+              return showLead ? (
+                <p className="border-l-4 border-primary pl-5 text-xl leading-relaxed text-foreground md:text-2xl">
+                  {article.dek}
+                </p>
+              ) : null
+            })()}
             {contentBlocks ? (
               contentBlocks.map((block, index) => renderBlock(block, index))
             ) : (article.content ?? '').trim() ? (
-              (article.content ?? '').split(/\n{2,}/).filter(Boolean).map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))
+              (article.content ?? '')
+                .split(/\n{2,}/)
+                .filter(Boolean)
+                .map((paragraph, index) => (
+                  <p key={index} className={isWireStory ? 'font-serif text-[1.05rem] leading-9 text-foreground/95' : undefined}>
+                    {paragraph}
+                  </p>
+                ))
             ) : (
               <div className="rounded-3xl border border-border bg-card p-8">
-                <p className="text-lg font-semibold text-foreground">{article.dek}</p>
-                {article.externalUrl && (
-                  <>
-                    <p className="mt-6">
-                      <a
-                        href={article.externalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-background transition hover:bg-primary/90"
-                      >
-                        Go to article
-                        <ArrowUpRight className="size-4" />
-                      </a>
-                    </p>
-                    <p className="mt-4 text-sm text-muted-foreground">
-                      This article was syndicated from {article.author}. BDL News presents this story with summary and context. The full reporting belongs to the original publisher.
-                    </p>
-                  </>
-                )}
-                {!article.externalUrl && (
-                  <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                    Sonke can summarize this headline, explain the context, or help you filter the latest news into what matters most. Tap the assistant at the bottom-right to get the quick version.
-                  </p>
-                )}
+                <p className="text-lg font-semibold text-foreground">This story is curated for you.</p>
+                <p className="mt-4 text-sm leading-7 text-muted-foreground">
+                  Sonke can summarize this headline, explain the context, or help you filter the latest news into what matters most. Tap the assistant at the bottom-right to get the quick version.
+                </p>
               </div>
             )}
           </div>
+
         </section>
       </article>
 

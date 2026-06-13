@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { saveArticle } from '@/app/admin/actions'
+import { ArticleBuilder } from '@/components/admin/article-builder'
 import { Field, inputClass } from '@/components/admin/ui'
 import { Button } from '@/components/ui/button'
 import { AnalyticsEvents, trackEvent } from '@/lib/analytics'
@@ -129,9 +130,11 @@ export function ArticleForm({
       <Field label="Subtitle">
         <input className={inputClass} name="subtitle" defaultValue={article?.subtitle ?? article?.dek ?? ''} />
       </Field>
-      <Field label="Content">
-        <textarea className={`${inputClass} min-h-56`} name="content" defaultValue={article?.content ?? ''} />
-      </Field>
+      <ArticleBuilder
+        initialContent={article?.content ?? ''}
+        headline={article?.headline ?? article?.title ?? ''}
+        subtitle={article?.subtitle ?? article?.dek ?? ''}
+      />
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" size="sm" onClick={() => runAi('generate_headline')}>Sonke: Generate headline</Button>
         <Button type="button" variant="outline" size="sm" onClick={() => runAi('improve_headline')}>Sonke: Improve headline</Button>

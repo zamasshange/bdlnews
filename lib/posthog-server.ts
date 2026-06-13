@@ -15,7 +15,10 @@ export type PostHogDashboardStats = {
 }
 
 function getApiKey() {
-  return process.env.POSTHOG_API_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_KEY ?? ''
+  const key = process.env.POSTHOG_API_KEY?.trim() ?? ''
+  if (!key || key.includes('personal_api_key') || key.startsWith('phc_')) return ''
+  if (!key.startsWith('phx_')) return ''
+  return key
 }
 
 function getApiHost() {
