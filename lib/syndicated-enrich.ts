@@ -1,5 +1,13 @@
 import type { Article } from '@/lib/data'
-import { buildWireImageCaption, extractArticleBodyFromUrl, looksTruncated } from '@/lib/article-extractor'
+import {
+  contentNeedsTwitterEnhancement,
+  extractArticleBodyFromUrl,
+  looksTruncated,
+} from '@/lib/article-extractor'
+import {
+  countResolvableTwitterLinks,
+  mergeExtractedTweetUrls,
+} from '@/lib/social-embeds'
 import { persistSyndicatedArticles } from '@/lib/syndicated-cache'
 
 export async function enrichSyndicatedArticle(article: Article): Promise<Article> {
@@ -8,12 +16,29 @@ export async function enrichSyndicatedArticle(article: Article): Promise<Article
   try {
     let content = article.content ?? article.dek ?? ''
     let imageCredit = article.imageCredit
+    const needsTwitterEnhancement = contentNeedsTwitterEnhancement(content)
+    const shouldExtractFromSource = looksTruncated(content) || needsTwitterEnhancement
 
-    if (looksTruncated(content)) {
+    if (shouldExtractFromSource) {
       const extracted = await extractArticleBodyFromUrl(article.externalUrl)
       if (extracted?.content) {
-        content = extracted.content
         imageCredit = imageCredit || extracted.imageCredit
+
+        if (looksTruncated(content)) {
+          content = extracted.content
+        } else if (needsTwitterEnhancement) {
+          const extractedTweetCount =
+            countResolvableTwitterLinks(extracted.content) + (extracted.tweetUrls?.length ?? 0)
+          if (extractedTweetCount > 0 && extracted.content.length >= content.length * 0.5) {
+            content = extracted.content
+          } else {
+            content = mergeExtractedTweetUrls(content, extracted.content)
+          }
+        }
+
+        if (countResolvableTwitterLinks(content) === 0 && extracted.tweetUrls?.length) {
+          content = `${content}\n\n${extracted.tweetUrls.join('\n\n')}`
+        }
       }
     }
 

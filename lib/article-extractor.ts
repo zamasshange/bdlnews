@@ -30,6 +30,67 @@ function extractMeta(html: string, property: string) {
   return match?.[1] ? decodeHtml(match[1]).trim() : ''
 }
 
+function extractTweetUrlFromMarkup(markup: string) {
+  const href =
+    markup.match(/href=["'](https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[^"']*\/status\/\d+[^"']*)["']/i)?.[1] ??
+    markup.match(/href=["'](https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/i\/status\/\d+[^"']*)["']/i)?.[1]
+
+  if (!href) return null
+  const id = href.match(/status\/(\d+)/i)?.[1]
+  return id ? `https://twitter.com/i/status/${id}` : href.split('?')[0]
+}
+
+function extractTweetUrlsFromHtml(html: string) {
+  const urls = new Set<string>()
+
+  for (const match of html.matchAll(/<blockquote[^>]*class=["'][^"']*twitter-tweet[^"']*["'][^>]*>[\s\S]*?<\/blockquote>/gi)) {
+    const url = extractTweetUrlFromMarkup(match[0])
+    if (url) urls.add(url)
+  }
+
+  for (const match of html.matchAll(/href=["'](https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[^"']*\/status\/\d+[^"']*)["']/gi)) {
+    const url = extractTweetUrlFromMarkup(match[0])
+    if (url) urls.add(url)
+  }
+
+  return [...urls]
+}
+
+function extractContentInOrder(html: string) {
+  const articleHtml = html.match(/<article[\s\S]*?<\/article>/i)?.[0] ?? html
+  const mainHtml = articleHtml.match(/<main[\s\S]*?<\/main>/i)?.[0] ?? articleHtml
+  const tokens = mainHtml.split(
+    /(<blockquote[^>]*class=["'][^"']*twitter-tweet[^"']*["'][^>]*>[\s\S]*?<\/blockquote>)/gi,
+  )
+
+  const parts: string[] = []
+
+  for (const token of tokens) {
+    if (/twitter-tweet/i.test(token)) {
+      const url = extractTweetUrlFromMarkup(token)
+      if (url) parts.push(url)
+      continue
+    }
+
+    const paragraphs = [...token.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
+      .map((match) => stripTags(match[1] ?? ''))
+      .filter((text) => text.length > 40)
+
+    parts.push(...paragraphs)
+  }
+
+  if (parts.length >= 2) return parts.join('\n\n')
+
+  const fallbackParagraphs = [...mainHtml.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
+    .map((match) => stripTags(match[1] ?? ''))
+    .filter((text) => text.length > 40)
+
+  if (fallbackParagraphs.length >= 2) return fallbackParagraphs.join('\n\n')
+
+  const articleText = stripTags(mainHtml)
+  return articleText.length > 200 ? articleText : ''
+}
+
 export async function extractOgImageFromUrl(url: string) {
   try {
     const response = await fetch(url, {
@@ -63,34 +124,16 @@ export async function extractOgImageFromUrl(url: string) {
   }
 }
 
-function extractParagraphs(html: string) {
-  const matches = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
-  const paragraphs = matches
-    .map((match) => stripTags(match[1] ?? ''))
-    .filter((text) => text.length > 40)
-
-  if (paragraphs.length >= 2) return paragraphs.join('\n\n')
-
-  const articleMatch = html.match(/<article[\s\S]*?<\/article>/i)?.[0]
-  if (articleMatch) {
-    const articleText = stripTags(articleMatch)
-    if (articleText.length > 200) return articleText
-  }
-
-  const mainMatch = html.match(/<main[\s\S]*?<\/main>/i)?.[0]
-  if (mainMatch) {
-    const mainText = stripTags(mainMatch)
-    if (mainText.length > 200) return mainText
-  }
-
-  return ''
-}
-
 export function looksTruncated(text?: string | null) {
   if (!text?.trim()) return true
   const trimmed = text.trim()
   if (trimmed.endsWith('...') || trimmed.endsWith('…')) return true
   return trimmed.split(/\s+/).filter(Boolean).length < 90
+}
+
+export function contentNeedsTwitterEnhancement(content?: string | null) {
+  if (!content?.trim()) return false
+  return /pic\.twitter\.com|(?:https?:\/\/)?t\.co\/|twitter\.com\/.*status|x\.com\/.*status/i.test(content)
 }
 
 export async function extractArticleBodyFromUrl(url: string) {
@@ -108,6 +151,8 @@ export async function extractArticleBodyFromUrl(url: string) {
     if (!response.ok) return null
 
     const html = await response.text()
+    const tweetUrls = extractTweetUrlsFromHtml(html)
+
     const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/i)
     if (jsonLdMatch?.[1]) {
       try {
@@ -118,6 +163,7 @@ export async function extractArticleBodyFromUrl(url: string) {
           if (body.length > 200) {
             return {
               content: body,
+              tweetUrls,
               imageCredit: typeof node?.author?.name === 'string' ? node.author.name : undefined,
             }
           }
@@ -127,14 +173,15 @@ export async function extractArticleBodyFromUrl(url: string) {
       }
     }
 
-    const paragraphs = extractParagraphs(html)
+    const content = extractContentInOrder(html)
     const ogDescription = extractMeta(html, 'og:description')
-    const content = paragraphs || ogDescription
+    const resolvedContent = content || ogDescription
 
-    if (!content || content.length < 120) return null
+    if (!resolvedContent || resolvedContent.length < 120) return null
 
     return {
-      content,
+      content: resolvedContent,
+      tweetUrls,
       imageCredit: extractMeta(html, 'og:image:alt') || undefined,
     }
   } catch {
