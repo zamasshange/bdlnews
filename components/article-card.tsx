@@ -3,29 +3,78 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'motion/react'
-import { type Article, timeAgo } from '@/lib/data'
+import { type Article } from '@/lib/data'
 import { StoryHeadline } from '@/components/story-headline'
+import {
+  formatPresspointDate,
+  PresspointMetaLine,
+} from '@/components/presspoint/section-heading'
+import { categoryPathFromName } from '@/lib/category-paths'
 import { cn } from '@/lib/utils'
 
 export function ArticleCard({
   article,
   size = 'md',
+  layout = 'stack',
 }: {
   article: Article
   size?: 'sm' | 'md' | 'lg'
+  layout?: 'stack' | 'horizontal'
 }) {
+  if (layout === 'horizontal') {
+    return (
+      <motion.article
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.45 }}
+      >
+        <Link
+          href={`/article/${article.slug}`}
+          className="story-link group flex gap-4 border-b border-border py-5"
+        >
+          <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-xl bg-muted md:h-28 md:w-32">
+            <Image
+              src={article.image || '/placeholder.svg'}
+              alt={article.title}
+              fill
+              sizes="128px"
+              unoptimized={article.image?.startsWith('http')}
+              className="story-image object-cover"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <PresspointMetaLine
+              category={article.category}
+              date={formatPresspointDate(article.publishedAt)}
+              categoryHref={categoryPathFromName(article.category)}
+            />
+            <StoryHeadline
+              title={article.title}
+              limit="rail"
+              lines={3}
+              className="mt-3 text-lg font-semibold leading-snug text-foreground transition group-hover:text-primary md:text-xl"
+            />
+          </div>
+        </Link>
+      </motion.article>
+    )
+  }
+
   return (
     <motion.article
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.55, ease: [0.21, 0.47, 0.32, 0.98] }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.45 }}
     >
-      <Link
-        href={`/article/${article.slug}`}
-        className="story-link group block border-t border-border pt-4"
-      >
-        <div className={cn('relative overflow-hidden bg-muted', size === 'lg' ? 'aspect-[1.38]' : 'aspect-[1.45]')}>
+      <Link href={`/article/${article.slug}`} className="story-link group block">
+        <div
+          className={cn(
+            'relative overflow-hidden rounded-2xl bg-muted',
+            size === 'lg' ? 'aspect-[4/3]' : 'aspect-[1.05]',
+          )}
+        >
           <Image
             src={article.image || '/placeholder.svg'}
             alt={article.title}
@@ -36,18 +85,20 @@ export function ArticleCard({
           />
         </div>
         <div className="pt-4">
+          <PresspointMetaLine
+            category={article.category}
+            date={formatPresspointDate(article.publishedAt)}
+            categoryHref={categoryPathFromName(article.category)}
+          />
           <StoryHeadline
             title={article.title}
             limit="card"
             lines={2}
             className={cn(
-              'font-medium leading-tight text-foreground transition group-hover:text-primary',
-              size === 'lg' ? 'text-3xl md:text-4xl' : 'text-2xl',
+              'mt-3 font-semibold leading-snug text-foreground transition group-hover:text-primary',
+              size === 'lg' ? 'text-2xl md:text-3xl' : 'text-lg md:text-xl',
             )}
           />
-          <p className="mt-3 text-xs uppercase tracking-[0.24em] text-muted-foreground">
-            {timeAgo(article.publishedAt)}
-          </p>
         </div>
       </Link>
     </motion.article>

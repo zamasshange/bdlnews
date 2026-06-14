@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-export function NewsletterForm() {
+export function NewsletterForm({ variant = 'default' }: { variant?: 'default' | 'footer' | 'cta' }) {
   const [message, setMessage] = useState('')
+  const isFooter = variant === 'footer'
+  const isCta = variant === 'cta'
 
   async function subscribe(formData: FormData) {
     const response = await fetch('/api/newsletter', {
@@ -16,25 +18,39 @@ export function NewsletterForm() {
   }
 
   return (
-    <form action={subscribe} className="flex flex-col gap-3 sm:flex-row">
-      <label className="sr-only" htmlFor="email">
+    <form action={subscribe} className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <label className="sr-only" htmlFor="newsletter-email">
         Email
       </label>
       <input
-        id="email"
+        id="newsletter-email"
         name="email"
         type="email"
-        placeholder="Email address"
-        className="min-h-12 flex-1 border border-black/30 bg-background px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        required
+        placeholder="Enter your email address"
+        className={cn(
+          'min-h-12 flex-1 rounded-full px-5 text-sm outline-none',
+          isFooter || isCta
+            ? 'border border-white/15 bg-white/8 text-white placeholder:text-white/45'
+            : 'border border-border bg-background text-foreground placeholder:text-muted-foreground',
+        )}
       />
       <button
         type="submit"
-        className="inline-flex min-h-12 items-center justify-center gap-2 bg-foreground px-6 text-xs font-black uppercase text-background transition hover:bg-card hover:text-foreground"
+        className={cn(
+          'inline-flex min-h-12 items-center justify-center rounded-full px-6 text-sm font-semibold transition',
+          isFooter || isCta
+            ? 'bg-white text-brand-navy hover:bg-white/90'
+            : 'bg-foreground text-background hover:bg-primary hover:text-primary-foreground',
+        )}
       >
-        <Mail className="size-4" />
         Subscribe
       </button>
-      {message && <p className="text-xs font-black uppercase">{message}</p>}
+      {message ? (
+        <p className={cn('text-xs font-medium', isFooter || isCta ? 'text-white/75' : 'text-muted-foreground')}>
+          {message}
+        </p>
+      ) : null}
     </form>
   )
 }

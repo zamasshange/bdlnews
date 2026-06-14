@@ -12,18 +12,19 @@ import { NAV_LINKS } from '@/lib/data'
 import { categoryPathFromName } from '@/lib/category-paths'
 import { cn } from '@/lib/utils'
 
+function editionDate() {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 export function Navbar() {
-  const [scrolled, setScrolled] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -38,44 +39,51 @@ export function Navbar() {
 
   return (
     <>
-      <header className={cn('sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-xl', scrolled && 'nav-glow')}>
+      <header className="sticky top-0 z-50 bg-brand-navy text-brand-navy-foreground">
+        <div className="jox-container border-b border-white/10 py-2.5">
+          <div className="flex items-center justify-between text-xs text-white/70">
+            <p>{editionDate()}</p>
+            <p className="hidden sm:block">Africa&apos;s AI Newsroom • Live Wire</p>
+          </div>
+        </div>
+
         <div className="jox-container">
-          <div
-            className={cn(
-              'flex items-center justify-between gap-4 border-b border-border transition-all duration-300',
-              scrolled ? 'py-3' : 'py-5',
-            )}
-          >
+          <div className="flex items-center justify-between gap-4 py-5 md:py-6">
             <Button
               variant="ghost"
               size="icon"
-              className="border border-border bg-background text-foreground hover:bg-muted lg:hidden"
+              className="border border-white/15 text-white hover:bg-white/10 lg:hidden"
               aria-label="Open menu"
               onClick={() => setMobileOpen(true)}
             >
               <Menu className="size-5" />
             </Button>
 
-            <div className="flex min-w-0 items-center gap-4">
-              <Link href="/" aria-label="BDL News home" className="shrink-0">
-                <Logo className={cn(scrolled ? 'h-11 md:h-14' : 'h-14 md:h-18')} />
+            <Link href="/" aria-label="BDL News home" className="shrink-0">
+              <Logo className="h-10 brightness-0 invert md:h-12" />
+            </Link>
+
+            <nav className="hidden items-center gap-1 lg:flex">
+              {NAV_LINKS.slice(1, 6).map((label) => (
+                <Link
+                  key={label}
+                  href={categoryPathFromName(label)}
+                  className="px-2 text-sm text-white/75 transition hover:text-white"
+                >
+                  {label}
+                  <span className="ml-2 text-white/35">•</span>
+                </Link>
+              ))}
+              <Link href="/contact-us" className="px-2 text-sm text-white/75 transition hover:text-white">
+                Contact
               </Link>
-              <div className="hidden items-center gap-2 md:flex">
-                <span className="inline-flex items-center gap-2 border border-primary/25 bg-primary/8 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-primary">
-                  <span className="live-dot size-2 rounded-full bg-primary" />
-                  Live
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground">
-                  Africa&apos;s AI newsroom
-                </span>
-              </div>
-            </div>
+            </nav>
 
             <div className="flex items-center gap-2">
               <Button
-              variant="ghost"
-              size="icon"
-                className="border border-border bg-background text-foreground hover:bg-muted"
+                variant="ghost"
+                size="icon"
+                className="border border-white/15 text-white hover:bg-white/10"
                 aria-label="Search"
                 onClick={() => setSearchOpen(true)}
               >
@@ -83,43 +91,45 @@ export function Navbar() {
               </Button>
               <button
                 type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('sonke:ask', { detail: { message: 'What are the biggest stories right now?' } }))}
-                className="hidden items-center gap-2 border border-border bg-background px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-foreground transition hover:border-primary hover:text-primary sm:inline-flex"
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent('sonke:ask', { detail: { message: 'What are the biggest stories right now?' } }),
+                  )
+                }
+                className="hidden items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10 sm:inline-flex"
               >
-                <Sparkles className="size-4 text-primary" />
+                <Sparkles className="size-4" />
                 Ask Sonke
               </button>
               <Link
                 href="#subscribe"
-                className="hidden bg-primary px-4 py-2 text-xs font-black uppercase text-primary-foreground transition hover:bg-foreground sm:inline-flex"
+                className="hidden rounded-full bg-white px-5 py-2.5 text-xs font-semibold text-brand-navy transition hover:bg-white/90 sm:inline-flex"
               >
                 Subscribe
               </Link>
             </div>
           </div>
 
-          <nav className="no-scrollbar hidden items-center justify-between gap-1 overflow-x-auto py-3 lg:flex">
+          <nav className="no-scrollbar hidden items-center gap-1 overflow-x-auto border-t border-white/10 py-3 lg:flex">
             {NAV_LINKS.map((label) => {
               const href = label === 'Home' ? '/' : categoryPathFromName(label)
               const active = pathname === href
-              const isAi = label === 'AI News'
+              const isSignal = label === 'AI News'
               return (
                 <Link
                   key={label}
                   href={href}
                   className={cn(
-                    'relative px-3 py-1 text-[12px] font-black uppercase tracking-wide transition',
-                    isAi
-                      ? 'text-primary hover:text-primary'
-                      : 'text-muted-foreground hover:text-primary',
-                    active && 'text-primary',
+                    'relative whitespace-nowrap px-3 py-1 text-xs font-semibold uppercase tracking-wide transition',
+                    isSignal ? 'text-primary' : 'text-white/70 hover:text-white',
+                    active && 'text-white',
                   )}
                 >
-                  {isAi ? 'BDL Signal' : label}
+                  {isSignal ? 'BDL Signal' : label}
                   {active && (
                     <motion.span
                       layoutId="nav-active"
-                      className="absolute inset-x-3 -bottom-3 h-0.5 bg-primary"
+                      className="absolute inset-x-2 -bottom-3 h-0.5 bg-primary"
                     />
                   )}
                 </Link>
@@ -138,22 +148,22 @@ export function Navbar() {
             exit={{ opacity: 0 }}
           >
             <div
-              className="absolute inset-0 bg-foreground/30 backdrop-blur-sm"
+              className="absolute inset-0 bg-brand-navy/70 backdrop-blur-sm"
               onClick={() => setMobileOpen(false)}
             />
             <motion.div
-              className="absolute left-0 top-0 h-full w-80 max-w-[86vw] border-r border-border bg-background p-5"
+              className="absolute left-0 top-0 h-full w-80 max-w-[86vw] bg-brand-navy p-5 text-white"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 260 }}
             >
               <div className="mb-8 flex items-center justify-between">
-                <Logo className="h-12" />
+                <Logo className="h-10 brightness-0 invert" />
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="border border-border"
+                  className="border border-white/15 text-white"
                   onClick={() => setMobileOpen(false)}
                   aria-label="Close menu"
                 >
@@ -168,9 +178,9 @@ export function Navbar() {
                       key={label}
                       href={href}
                       onClick={() => setMobileOpen(false)}
-                      className="border-b border-border py-4 font-heading text-3xl leading-none text-foreground transition hover:text-primary"
+                      className="border-b border-white/10 py-4 text-2xl font-semibold text-white transition hover:text-primary"
                     >
-                      {label}
+                      {label === 'AI News' ? 'BDL Signal' : label}
                     </Link>
                   )
                 })}

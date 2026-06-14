@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Inter, Inter_Tight } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AiAssistant } from '@/components/ai-assistant'
 import { PostHogProvider } from '@/components/providers/posthog-provider'
@@ -9,9 +9,9 @@ import { coreSearchKeywords } from '@/lib/seo-keywords'
 import { siteConfig } from '@/lib/site'
 import './globals.css'
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'], display: 'swap' })
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const inter = Inter({ variable: '--font-inter', subsets: ['latin'], display: 'swap' })
+const interTight = Inter_Tight({
+  variable: '--font-inter-tight',
   subsets: ['latin'],
   display: 'swap',
 })
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport = {
-  themeColor: '#ffffff',
+  themeColor: '#0c1029',
 }
 
 export default function RootLayout({
@@ -53,7 +53,7 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} bg-background`}
+      className={`${inter.variable} ${interTight.variable} bg-background`}
     >
       <body className="font-sans antialiased">
         <JsonLd data={[organizationJsonLd(), websiteJsonLd(), founderJsonLd()]} />

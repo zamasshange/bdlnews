@@ -1,84 +1,92 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { Logo } from '@/components/logo'
-import { NAV_LINKS, SITE_LINKS, articles } from '@/lib/data'
+import { NewsletterForm } from '@/components/newsletter-form'
+import { NAV_LINKS, SITE_LINKS } from '@/lib/data'
 import { categoryPathFromName } from '@/lib/category-paths'
+import { siteConfig } from '@/lib/site'
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border bg-card">
-      <div className="jox-container py-12">
-        <div className="mb-10 flex flex-col gap-6 border-b border-border pb-8 lg:flex-row lg:items-center lg:justify-between">
-          <Logo className="h-14 md:h-20" />
-          <nav className="flex flex-wrap gap-x-5 gap-y-2">
-            {NAV_LINKS.slice(1, 7).map((link) => (
-              <Link
-                key={link}
-                href={categoryPathFromName(link)}
-                className="text-xs font-black uppercase text-muted-foreground transition hover:text-primary"
-              >
-                {link}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <div className="grid gap-8 lg:grid-cols-[0.85fr_1fr_0.7fr]">
+    <footer className="bg-brand-navy text-brand-navy-foreground">
+      <div className="jox-container border-b border-white/10 py-12 md:py-16">
+        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div>
-            <h2 className="max-w-md text-4xl font-semibold leading-tight text-foreground md:text-5xl">
-              News for people who move fast.
-            </h2>
-            <p className="mt-5 max-w-sm text-sm leading-relaxed text-muted-foreground">
-              BDL News keeps the original reporting data, authors, topics, and live
-              feed flowing through a sharper editorial experience.
-            </p>
+            <h3 className="max-w-xl text-3xl font-semibold leading-tight md:text-4xl">
+              Subscribe to our newsletter to stay ahead with{' '}
+              <span className="text-white/55">daily headlines.</span>
+            </h3>
+          </div>
+          <NewsletterForm variant="footer" />
+        </div>
+      </div>
+
+      <div className="jox-container py-12">
+        <div className="mb-10 h-px bg-white/10" />
+        <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
+          <div className="space-y-6">
+            <Link href="/" aria-label="BDL News home">
+              <Logo className="h-10 brightness-0 invert md:h-12" />
+            </Link>
+            <p className="max-w-md text-sm leading-7 text-white/65">{siteConfig.description}</p>
+            <p className="text-sm text-white/55">Follow us for breaking news and live updates.</p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            {articles.slice(0, 3).map((article) => (
-              <Link
-                key={article.slug}
-                href={`/article/${article.slug}`}
-                className="story-link group block"
-              >
-                <div className="relative aspect-square overflow-hidden bg-muted">
-                  <Image
-                    src={article.image}
-                    alt={article.title}
-                    fill
-                    sizes="180px"
-                    className="story-image object-cover"
-                  />
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          <div className="grid content-start gap-5 text-sm text-muted-foreground">
+          <div className="grid gap-8 sm:grid-cols-3">
             <div>
-              <p className="mb-2 text-xs font-black uppercase text-primary">Pages</p>
-              <div className="grid gap-2">
-                {SITE_LINKS.map((link) => (
-                  <Link key={link.href} href={link.href} className="transition hover:text-foreground">
+              <p className="mb-4 text-sm font-semibold text-white">Pages</p>
+              <div className="grid gap-2 text-sm text-white/65">
+                <Link href="/" className="transition hover:text-white">
+                  Home
+                </Link>
+                {SITE_LINKS.slice(0, 4).map((link) => (
+                  <Link key={link.href} href={link.href} className="transition hover:text-white">
                     {link.label}
                   </Link>
                 ))}
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs font-black uppercase text-primary">Contact Us</p>
-              <p>burdolar@gmail.com</p>
-              <p>+27736701175</p>
+              <p className="mb-4 text-sm font-semibold text-white">Categories</p>
+              <div className="grid gap-2 text-sm text-white/65">
+                {NAV_LINKS.slice(1, 6).map((label) => (
+                  <Link
+                    key={label}
+                    href={categoryPathFromName(label)}
+                    className="transition hover:text-white"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-4 text-sm font-semibold text-white">Contact us</p>
+              <div className="grid gap-2 text-sm text-white/65">
+                <p>{siteConfig.name}</p>
+                <a href="mailto:burdolar@gmail.com" className="transition hover:text-white">
+                  burdolar@gmail.com
+                </a>
+                <a href="tel:+27736701175" className="transition hover:text-white">
+                  +27 73 670 1175
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-border pt-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 BDL Corp</p>
-          <p>Designed as a fast, AI-led newsroom.</p>
+        <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} BDL Corp. All rights reserved.</p>
+          <div className="flex items-center gap-3">
+            <Link href="/about-us" className="transition hover:text-white">
+              Privacy
+            </Link>
+            <span>|</span>
+            <Link href="/contact-us" className="transition hover:text-white">
+              Terms
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
   )
 }
-
