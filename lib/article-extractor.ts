@@ -1,6 +1,13 @@
 import 'server-only'
 
-import { cleanWireExcerpt, isSyndicatedContentComplete, looksTruncated, syndicatedWordCount } from '@/lib/syndicated-content'
+import {
+  cleanWireExcerpt,
+  isGarbageArticleContent,
+  isSyndicatedContentComplete,
+  looksTruncated,
+  sanitizeArticleBody,
+  syndicatedWordCount,
+} from '@/lib/syndicated-content'
 
 const FETCH_HEADERS = {
   'User-Agent':
@@ -271,14 +278,17 @@ function extractFromHtml(html: string, pageUrl: string) {
   const imageUrl = extractOgImageFromHtml(html, pageUrl)
   const jsonLd = extractJsonLdBody(html)
   if (jsonLd?.content) {
-    return { content: jsonLd.content, tweetUrls, imageCredit: jsonLd.imageCredit, imageUrl }
+    const content = usableExtractedContent(jsonLd.content)
+    if (content) {
+      return { content, tweetUrls, imageCredit: jsonLd.imageCredit, imageUrl }
+    }
   }
 
   const content = extractParagraphsFromHtml(html)
   const ogDescription = extractMeta(html, 'og:description')
-  const resolvedContent = cleanWireExcerpt(content || ogDescription)
+  const resolvedContent = usableExtractedContent(cleanWireExcerpt(content || ogDescription))
 
-  if (!resolvedContent || syndicatedWordCount(resolvedContent) < 80) return null
+  if (!resolvedContent) return null
 
   return {
     content: resolvedContent,
@@ -298,25 +308,37 @@ export async function extractOgImageFromUrl(url: string) {
   }
 }
 
+function usableExtractedContent(content: string) {
+  const sanitized = sanitizeArticleBody(content)
+  return sanitized && isSyndicatedContentComplete(sanitized) ? sanitized : ''
+}
+
 async function extractFromJinaReader(url: string) {
   try {
     const response = await fetch(`https://r.jina.ai/${url}`, {
       headers: { Accept: 'text/plain' },
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(8000),
       next: { revalidate: 3600 },
     })
     if (!response.ok) return null
 
     const raw = await response.text()
-    const content = cleanWireExcerpt(
-      raw
-        .split('\n')
-        .filter((line) => !/^(Title:|URL Source:|Markdown Content:|Published Time:)/i.test(line.trim()))
-        .join('\n')
-        .trim(),
-    )
+    const prose = raw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => {
+        if (!line) return false
+        if (/^(Title:|URL Source:|Markdown Content:|Published Time:|Image:|={3,})/i.test(line)) return false
+        if (/^#{1,6}\s/.test(line) && line.length < 100) return false
+        if (/^!\[[^\]]*\]\(https?:\/\//i.test(line)) return false
+        if ((line.match(/\]\(https?:\/\//g) ?? []).length >= 2) return false
+        if (/^(\*?\s*\[[^\]]+\]\([^)]+\)\s*)+$/i.test(line)) return false
+        return line.length >= 50
+      })
+      .join('\n\n')
 
-    if (syndicatedWordCount(content) < 80 || looksTruncated(content)) return null
+    const content = usableExtractedContent(cleanWireExcerpt(prose))
+    if (!content) return null
 
     return {
       content,
@@ -332,10 +354,12 @@ async function extractFromJinaReader(url: string) {
 export {
   SYNDICATED_STUB_MARKER,
   cleanWireExcerpt,
+  isGarbageArticleContent,
   isPersistedStubContent,
   isSyndicatedContentComplete,
   looksTruncated,
   needsSyndicatedBodyFetch,
+  sanitizeArticleBody,
   syndicatedWordCount,
 } from '@/lib/syndicated-content'
 
@@ -346,21 +370,23 @@ export function contentNeedsTwitterEnhancement(content?: string | null) {
 
 export async function extractArticleBodyFromUrl(url: string) {
   try {
-    const rssExtracted = await extractFromSiteRss(url)
-    if (rssExtracted?.content && isSyndicatedContentComplete(rssExtracted.content)) {
-      return {
-        content: rssExtracted.content,
-        tweetUrls: [] as string[],
-        imageCredit: rssExtracted.imageCredit,
-        imageUrl: rssExtracted.imageUrl,
-      }
-    }
+    const rssPromise = extractFromSiteRss(url)
+    const htmlPromise = fetchText(url, 7000).then((html) => {
+      if (!html || /Just a moment|cf-chl|security verification/i.test(html)) return null
+      return extractFromHtml(html, url)
+    })
 
-    const html = await fetchText(url, 12000)
-    if (html && !/Just a moment|cf-chl|security verification/i.test(html)) {
-      const extracted = extractFromHtml(html, url)
-      if (extracted && isSyndicatedContentComplete(extracted.content)) {
-        return extracted
+    const [rssExtracted, htmlExtracted] = await Promise.all([rssPromise, htmlPromise])
+
+    for (const candidate of [rssExtracted, htmlExtracted]) {
+      if (!candidate?.content) continue
+      const content = usableExtractedContent(candidate.content)
+      if (!content) continue
+      return {
+        content,
+        tweetUrls: candidate.tweetUrls ?? [],
+        imageCredit: candidate.imageCredit,
+        imageUrl: candidate.imageUrl,
       }
     }
 

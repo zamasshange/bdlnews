@@ -131,8 +131,15 @@
     letter-spacing: -0.02em;
   }
   .jox-container {
-    width: min(100% - 2rem, 1200px);
+    width: min(100% - 1.25rem, 1200px);
     margin-inline: auto;
+    padding-inline: 0.125rem;
+  }
+  @media (min-width: 640px) {
+    .jox-container {
+      width: min(100% - 2rem, 1200px);
+      padding-inline: 0;
+    }
   }
   .presspoint-card {
     @apply overflow-hidden rounded-2xl bg-card;

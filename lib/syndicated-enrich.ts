@@ -4,10 +4,12 @@ import {
   contentNeedsTwitterEnhancement,
   extractArticleBodyFromUrl,
   extractOgImageFromUrl,
+  isGarbageArticleContent,
   isPersistedStubContent,
   isSyndicatedContentComplete,
   looksTruncated,
   needsSyndicatedBodyFetch,
+  sanitizeArticleBody,
   syndicatedWordCount,
 } from '@/lib/article-extractor'
 import { hasRealImage } from '@/lib/feed-images'
@@ -24,8 +26,8 @@ function recentlyEnriched(enrichedAt?: string) {
 }
 
 function startingContent(article: Article) {
-  const fromContent = cleanWireExcerpt(article.content)
-  const fromDek = cleanWireExcerpt(article.dek)
+  const fromContent = sanitizeArticleBody(cleanWireExcerpt(article.content))
+  const fromDek = sanitizeArticleBody(cleanWireExcerpt(article.dek))
 
   if (isPersistedStubContent(article.content)) {
     return isSyndicatedContentComplete(fromDek) ? fromDek : ''
@@ -33,6 +35,10 @@ function startingContent(article: Article) {
   if (isSyndicatedContentComplete(fromContent)) return fromContent
   if (isSyndicatedContentComplete(fromDek)) return fromDek
   return ''
+}
+
+function hasGoodBody(content?: string | null) {
+  return Boolean(content && isSyndicatedContentComplete(content) && !isGarbageArticleContent(content))
 }
 
 export async function enrichSyndicatedArticle(article: Article): Promise<Article> {
@@ -44,7 +50,7 @@ export async function enrichSyndicatedArticle(article: Article): Promise<Article
     let image = article.image
     let imageCredit = article.imageCredit
     const words = syndicatedWordCount(content)
-    const complete = isSyndicatedContentComplete(content) && !isPersistedStubContent(article.content)
+    const complete = hasGoodBody(content) && !isPersistedStubContent(article.content)
 
     if (complete && recentlyEnriched(record?.enrichedAt) && !contentNeedsTwitterEnhancement(content)) {
       return {
@@ -84,7 +90,7 @@ export async function enrichSyndicatedArticle(article: Article): Promise<Article
         image = extracted.imageUrl
       }
 
-      if (extracted?.content) {
+      if (extracted?.content && hasGoodBody(extracted.content)) {
         imageCredit = imageCredit || extracted.imageCredit
 
         if (needsSyndicatedBodyFetch(article.content) || needsSyndicatedBodyFetch(content) || looksTruncated(content)) {
@@ -108,16 +114,18 @@ export async function enrichSyndicatedArticle(article: Article): Promise<Article
       if (ogImage) image = ogImage
     }
 
+    content = sanitizeArticleBody(content)
+
     const enriched: Article = {
       ...article,
-      content: content.trim(),
+      content,
       image: hasRealImage(image) ? image : article.image,
       dek: article.dek || content.split(/\n{2,}/)[0]?.slice(0, 280) || article.title,
       imageCredit: imageCredit || article.author,
       readingTime: Math.max(3, Math.ceil(syndicatedWordCount(content) / 220)),
     }
 
-    const enrichedSuccessfully = isSyndicatedContentComplete(enriched.content)
+    const enrichedSuccessfully = hasGoodBody(enriched.content)
     await persistSyndicatedArticles([enriched], enrichedSuccessfully)
     return enriched
   } catch {
@@ -125,8 +133,10 @@ export async function enrichSyndicatedArticle(article: Article): Promise<Article
   }
 }
 
-export async function enrichSyndicatedArticleFast(article: Article, timeoutMs = 12000): Promise<Article> {
-  if (!article.externalUrl || !needsSyndicatedBodyFetch(article.content)) {
+export async function enrichSyndicatedArticleFast(article: Article, timeoutMs = 4000): Promise<Article> {
+  if (!article.externalUrl) return article
+
+  if (hasGoodBody(article.content) && !contentNeedsTwitterEnhancement(article.content)) {
     return article
   }
 

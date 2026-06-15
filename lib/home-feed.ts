@@ -2,6 +2,7 @@ import 'server-only'
 
 import type { Article } from '@/lib/data'
 import { ensureArticleImages } from '@/lib/feed-images'
+import { persistSyndicatedArticles } from '@/lib/syndicated-cache'
 
 const KEEP_READING_COUNT = 6
 const KEEP_READING_MIN = 3
@@ -151,6 +152,20 @@ export async function buildHomeFeed(
     ...wireHighlights,
     ...spotlightStories,
   ])
+
+  const surfaced = [
+    pick(featured),
+    pick(secondFeature),
+    pick(featureTwo),
+    ...sideStories.map(pick),
+    ...gridStories.map(pick),
+    ...resources.map(pick),
+    ...keepReadingStories.map(pick),
+    ...remainingStories.slice(0, 12).map(pick),
+    ...wireHighlights.map(pick),
+    ...spotlightStories.map(pick),
+  ]
+  await persistSyndicatedArticles(surfaced)
 
   return {
     featured: pick(featured),

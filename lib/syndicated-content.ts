@@ -25,6 +25,26 @@ export function cleanWireExcerpt(content?: string | null) {
     .trim()
 }
 
+export function isGarbageArticleContent(content?: string | null) {
+  if (!content?.trim()) return true
+
+  const text = content.trim()
+  const words = syndicatedWordCount(text)
+  const markdownLinks = (text.match(/\[[^\]]+\]\(https?:\/\/[^)]+\)/g) ?? []).length
+  const bareUrls = (text.match(/https?:\/\/\S+/g) ?? []).length
+  const linkTokens = markdownLinks + bareUrls
+
+  if (markdownLinks >= 4) return true
+  if (bareUrls >= 6) return true
+  if (words > 0 && linkTokens / words > 0.12) return true
+  if (/Subscribe\s*\]|\bNews\]\(|\bPrivacy Policy\b|\bTerms (?:&|and) Conditions\b/i.test(text) && linkTokens >= 2) {
+    return true
+  }
+  if (/^\s*(\*?\s*\[[^\]]+\]\([^)]+\)\s*){3,}/m.test(text)) return true
+
+  return false
+}
+
 export function looksTruncated(text?: string | null) {
   if (!text?.trim() || isPaidPlanPlaceholder(text)) return true
   const trimmed = text.trim()
@@ -36,12 +56,27 @@ export function looksTruncated(text?: string | null) {
 
 export function isSyndicatedContentComplete(content?: string | null) {
   if (!content?.trim() || isPersistedStubContent(content) || isPaidPlanPlaceholder(content)) return false
+  if (isGarbageArticleContent(content)) return false
   if (looksTruncated(content)) return false
   return syndicatedWordCount(content) >= 80
 }
 
 export function needsSyndicatedBodyFetch(content?: string | null) {
   if (!content?.trim() || isPersistedStubContent(content) || isPaidPlanPlaceholder(content)) return true
+  if (isGarbageArticleContent(content)) return true
   if (!isSyndicatedContentComplete(content)) return true
   return false
+}
+
+export function sanitizeArticleBody(content?: string | null) {
+  if (!content?.trim() || isGarbageArticleContent(content)) return ''
+
+  const paragraphs = content
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 40 && !isGarbageArticleContent(part))
+
+  if (paragraphs.length >= 2) return paragraphs.join('\n\n')
+  if (paragraphs.length === 1 && syndicatedWordCount(paragraphs[0]) >= 80) return paragraphs[0]
+  return isGarbageArticleContent(content) ? '' : content.trim()
 }

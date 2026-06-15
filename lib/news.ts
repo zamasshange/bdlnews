@@ -1,7 +1,6 @@
 import 'server-only'
 
 import { createHash } from 'crypto'
-import { cache } from 'react'
 import { type Article, type AuthorProfile, type Category, type LiveItem, NAV_LINKS, sampleAuthors, podcastEpisodes } from '@/lib/data'
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
@@ -182,24 +181,35 @@ export async function getExternalNewsItems(query?: string, limit = 12): Promise<
 async function findExternalArticleBySlug(slug: string) {
   if (!slug.startsWith('ext-')) return undefined
 
-  const cached = await getSyndicatedArticleFromCache(slug)
-  if (cached) return cached
+  const direct = await getSyndicatedArticleFromCache(slug)
+  if (direct) return direct
+
+  const cached = await getCachedSyndicatedArticles(500)
+  const fromCache = cached.find((article) => article.slug === slug)
+  if (fromCache) return fromCache
 
   try {
     const results = await fetchExternalNews({ provider: 'all' })
-    for (const item of results.slice(0, 100)) {
+    let found: Article | undefined
+    const batch: Article[] = []
+
+    for (const item of results) {
       if (!item.url || !item.title) continue
       const mapped = mapExternalNewsItem(item)
-      if (mapped.slug === slug) {
-        void persistSyndicatedArticles([mapped])
-        return mapped
+      batch.push(mapped)
+      if (!found && mapped.slug === slug) {
+        found = mapped
       }
     }
+
+    if (batch.length) {
+      await persistSyndicatedArticles(batch)
+    }
+
+    return found
   } catch {
     return undefined
   }
-
-  return undefined
 }
 
 async function resolveSyndicatedArticle(article: Article) {
@@ -328,11 +338,15 @@ export async function getPublishedArticles(limit = 50): Promise<Article[]> {
   return data.map((row) => mapArticle(row as ArticleRow))
 }
 
-export const getArticleBySlug = cache(async function getArticleBySlug(slug: string): Promise<Article | undefined> {
+export async function getArticleBySlug(slug: string): Promise<Article | undefined> {
   if (slug.startsWith('ext-')) {
     const article = await findExternalArticleBySlug(slug)
     if (!article) return undefined
-    return resolveSyndicatedArticle(article)
+    try {
+      return await resolveSyndicatedArticle(article)
+    } catch {
+      return article
+    }
   }
 
   if (hasSupabaseAdminConfig()) {
@@ -359,7 +373,7 @@ export const getArticleBySlug = cache(async function getArticleBySlug(slug: stri
   }
 
   return findExternalArticleBySlug(slug)
-})
+}
 
 export async function getLiveUpdates(limit = 20): Promise<LiveItem[]> {
   if (!hasSupabaseAdminConfig()) return []

@@ -96,22 +96,22 @@ export default async function HomePage() {
     <SiteShell showTicker>
       <JsonLd data={homepageItemListJsonLd(headlineArticles)} />
 
-      <section className="jox-container py-10 md:py-14">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.42fr)]">
-          <article className="story-link group">
+      <section className="jox-container py-8 md:py-14">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(300px,0.42fr)] lg:gap-10">
+          <article className="story-link group space-y-8">
             <Link href={`/article/${featured.slug}`} className="block">
-              <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-muted">
+              <div className="relative aspect-[1.6] overflow-hidden rounded-2xl border border-border bg-muted sm:aspect-[16/10]">
                 <Image
                   src={featured.image}
                   alt={featured.title}
                   fill
                   priority
                   sizes="(max-width: 1024px) 100vw, 62vw"
-                  className="story-image object-cover"
+                  className="story-image object-cover object-center"
                   unoptimized={featured.image?.startsWith('http')}
                 />
-                <div className="presspoint-hero-gradient absolute inset-0" />
-                <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
+                <div className="presspoint-hero-gradient absolute inset-0 hidden sm:block" />
+                <div className="absolute inset-x-0 bottom-0 hidden p-6 sm:block md:p-8">
                   <span className="inline-flex rounded bg-primary px-3 py-1 text-xs font-semibold uppercase text-primary-foreground">
                     {featured.category}
                   </span>
@@ -129,9 +129,26 @@ export default async function HomePage() {
                   />
                 </div>
               </div>
+              <div className="mt-5 sm:hidden">
+                <span className="inline-flex rounded bg-primary px-3 py-1 text-xs font-semibold uppercase text-primary-foreground">
+                  {featured.category}
+                </span>
+                <StoryHeadline
+                  as="h1"
+                  title={featured.title}
+                  limit="hero"
+                  lines={3}
+                  className="mt-4 text-3xl font-semibold leading-tight text-foreground transition group-hover:text-primary"
+                />
+                <PresspointMetaLine
+                  category={featured.category}
+                  date={formatPresspointDate(featured.publishedAt)}
+                  className="mt-3"
+                />
+              </div>
             </Link>
 
-            <div className="mt-8 border-t border-border pt-8">
+            <div className="border-t border-border pt-6">
               <Link href={`/article/${secondFeature.slug}`} className="group block">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <PresspointMetaLine
@@ -154,7 +171,7 @@ export default async function HomePage() {
                   title={secondFeature.title}
                   limit="feature"
                   lines={2}
-                  className="mt-4 text-3xl font-semibold leading-tight text-foreground transition group-hover:text-primary md:text-4xl"
+                  className="mt-4 text-2xl font-semibold leading-tight text-foreground transition group-hover:text-primary sm:text-3xl md:text-4xl"
                 />
                 <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground">
                   {secondFeature.dek}
@@ -162,26 +179,26 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            <div className="mt-10">
+            <div className="mt-8">
               <PresspointSectionHeading title="World News" href={categoryPathFromName('World')} />
-              <div className="mt-6 grid gap-6 md:grid-cols-2">
+              <div className="mt-4 space-y-4 sm:mt-6 sm:space-y-0 sm:grid sm:gap-6 md:grid-cols-2">
                 {[featureTwo, ...sideStories.slice(0, 1)].map((article) => (
                   <Link
                     key={article.slug}
                     href={`/article/${article.slug}`}
-                    className="story-link group grid gap-4 md:grid-cols-[140px_1fr]"
+                    className="story-link group grid grid-cols-[minmax(112px,34%)_1fr] gap-4 sm:grid-cols-[140px_1fr]"
                   >
-                    <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
+                    <div className="relative aspect-[1.22] overflow-hidden rounded-xl border border-border bg-muted">
                       <Image
                         src={article.image}
                         alt={article.title}
                         fill
-                        sizes="140px"
-                        className="story-image object-cover"
+                        sizes="(max-width: 640px) 34vw, 140px"
+                        className="story-image object-cover object-center"
                         unoptimized={article.image?.startsWith('http')}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0 self-center">
                       <PresspointMetaLine
                         category={article.author}
                         date={new Date(article.publishedAt).toLocaleString('en-GB', {
@@ -196,7 +213,7 @@ export default async function HomePage() {
                         title={article.title}
                         limit="card"
                         lines={3}
-                        className="mt-3 text-lg font-semibold leading-snug text-foreground transition group-hover:text-primary"
+                        className="mt-2 text-base font-semibold leading-snug text-foreground transition group-hover:text-primary sm:mt-3 sm:text-lg"
                       />
                     </div>
                   </Link>
@@ -205,7 +222,7 @@ export default async function HomePage() {
             </div>
           </article>
 
-          <aside>
+          <aside className="border-t border-border pt-8 lg:border-t-0 lg:pt-0">
             <PresspointSectionHeading title="Top Global Stories" href="/news" />
             <div className="mt-4">
               {sideStories.map((article) => (
@@ -216,9 +233,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="jox-container pb-14">
+      <section className="jox-container pb-10 md:pb-14">
         <PresspointSectionHeading title="Economy" href={categoryPathFromName('Business')} />
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr_1.1fr]">
+        <div className="mt-4 grid gap-5 sm:mt-6 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {economyStories.map((article) => (
             <ArticleCard key={article.slug} article={article} />
           ))}
@@ -229,9 +246,9 @@ export default async function HomePage() {
       {techStories.length > 0 && (
         <section className="jox-container pb-14">
           <PresspointSectionHeading title="Technology" href={categoryPathFromName('Technology')} />
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="mt-4 grid gap-4 sm:mt-6 lg:grid-cols-[1.2fr_0.8fr]">
             <Link href={`/article/${techStories[0].slug}`} className="story-link group block">
-              <div className="relative aspect-[16/11] overflow-hidden rounded-2xl bg-muted">
+              <div className="relative aspect-[1.45] overflow-hidden rounded-2xl border border-border bg-muted sm:aspect-[16/11]">
                 <Image
                   src={techStories[0].image}
                   alt={techStories[0].title}
@@ -240,8 +257,8 @@ export default async function HomePage() {
                   className="story-image object-cover"
                   unoptimized={techStories[0].image?.startsWith('http')}
                 />
-                <div className="presspoint-hero-gradient absolute inset-0" />
-                <div className="absolute inset-x-0 bottom-0 p-6">
+                <div className="presspoint-hero-gradient absolute inset-0 hidden sm:block" />
+                <div className="absolute inset-x-0 bottom-0 hidden p-6 sm:block">
                   <span className="inline-flex rounded bg-primary px-3 py-1 text-xs font-semibold uppercase text-primary-foreground">
                     {techStories[0].category}
                   </span>
@@ -252,6 +269,18 @@ export default async function HomePage() {
                     className="mt-4 text-2xl font-semibold leading-tight text-white md:text-3xl"
                   />
                 </div>
+              </div>
+              <div className="mt-4 sm:hidden">
+                <PresspointMetaLine
+                  category={techStories[0].category}
+                  date={formatPresspointDate(techStories[0].publishedAt)}
+                />
+                <StoryHeadline
+                  title={techStories[0].title}
+                  limit="feature"
+                  lines={2}
+                  className="mt-3 text-xl font-semibold leading-snug text-foreground"
+                />
               </div>
             </Link>
             <div className="grid content-start gap-4">

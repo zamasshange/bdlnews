@@ -31,19 +31,19 @@ export function ArticleCard({
       >
         <Link
           href={`/article/${article.slug}`}
-          className="story-link group flex gap-4 border-b border-border py-5"
+          className="story-link group grid grid-cols-[minmax(112px,34%)_1fr] gap-4 border-b border-border py-5 sm:grid-cols-[minmax(128px,140px)_1fr] sm:gap-5"
         >
-          <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-xl bg-muted md:h-28 md:w-32">
+          <div className="relative aspect-[1.22] overflow-hidden rounded-xl border border-border bg-muted">
             <Image
               src={article.image || '/placeholder.svg'}
               alt={article.title}
               fill
-              sizes="128px"
+              sizes="(max-width: 640px) 34vw, 140px"
               unoptimized={article.image?.startsWith('http')}
-              className="story-image object-cover"
+              className="story-image object-cover object-center"
             />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 self-center">
             <PresspointMetaLine
               category={article.category}
               date={formatPresspointDate(article.publishedAt)}
@@ -53,7 +53,7 @@ export function ArticleCard({
               title={article.title}
               limit="rail"
               lines={3}
-              className="mt-3 text-lg font-semibold leading-snug text-foreground transition group-hover:text-primary md:text-xl"
+              className="mt-2 text-base font-semibold leading-snug text-foreground transition group-hover:text-primary sm:mt-3 sm:text-lg md:text-xl"
             />
           </div>
         </Link>
@@ -71,8 +71,8 @@ export function ArticleCard({
       <Link href={`/article/${article.slug}`} className="story-link group block">
         <div
           className={cn(
-            'relative overflow-hidden rounded-2xl bg-muted',
-            size === 'lg' ? 'aspect-[4/3]' : 'aspect-[1.05]',
+            'relative overflow-hidden rounded-2xl border border-border bg-muted',
+            size === 'lg' ? 'aspect-[1.38] sm:aspect-[4/3]' : 'aspect-[1.45]',
           )}
         >
           <Image
@@ -81,7 +81,7 @@ export function ArticleCard({
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
             unoptimized={article.image?.startsWith('http')}
-            className="story-image object-cover"
+            className="story-image object-cover object-center"
           />
         </div>
         <div className="pt-4">
@@ -96,7 +96,7 @@ export function ArticleCard({
             lines={2}
             className={cn(
               'mt-3 font-semibold leading-snug text-foreground transition group-hover:text-primary',
-              size === 'lg' ? 'text-2xl md:text-3xl' : 'text-lg md:text-xl',
+              size === 'lg' ? 'text-xl sm:text-2xl md:text-3xl' : 'text-lg sm:text-xl md:text-2xl',
             )}
           />
         </div>

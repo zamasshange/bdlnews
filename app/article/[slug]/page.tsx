@@ -18,6 +18,8 @@ import { breadcrumbJsonLd, buildArticleMetadata, newsArticleJsonLd } from '@/lib
 
 export const revalidate = 180
 export const maxDuration = 60
+export const dynamic = 'force-dynamic'
+export const dynamicParams = true
 
 export function generateStaticParams() {
   return []

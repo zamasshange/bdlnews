@@ -2,11 +2,27 @@ import 'server-only'
 
 import type { Article } from '@/lib/data'
 import { categoryFallbackImage, hasRealImage } from '@/lib/feed-images'
+import { isGarbageArticleContent, sanitizeArticleBody } from '@/lib/syndicated-content'
 import { hasSupabaseAdminConfig } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 
 const SETTINGS_KEY = 'syndicated_articles'
-const MAX_CACHED = 500
+const SLUG_INDEX_KEY = 'syndicated_slug_index'
+const MAX_CACHED = 2000
+const MAX_SLUG_INDEX = 3000
+
+export type SyndicatedSlugIndexEntry = {
+  slug: string
+  url: string
+  title: string
+  description: string
+  imageUrl: string | null
+  source: string
+  publishedAt: string | null
+  category: string | null
+  country: string | null
+  cachedAt: string
+}
 
 export type SyndicatedRecord = {
   slug: string
@@ -25,7 +41,8 @@ export type SyndicatedRecord = {
 }
 
 function recordToArticle(record: SyndicatedRecord): Article {
-  const content = record.fullContent || record.description
+  const rawContent = record.fullContent || record.description
+  const content = sanitizeArticleBody(rawContent) || (isGarbageArticleContent(rawContent) ? '' : rawContent)
   return {
     id: record.url,
     slug: record.slug,
@@ -67,8 +84,122 @@ function articleToRecord(article: Article, enriched = false): SyndicatedRecord {
 }
 
 let memoryCache: Record<string, SyndicatedRecord> | null = null
+let memorySlugIndex: Record<string, SyndicatedSlugIndexEntry> | null = null
 let memoryCacheAt = 0
 const MEMORY_CACHE_MS = 60_000
+
+const runtimeSlugIndex = new Map<string, SyndicatedSlugIndexEntry>()
+
+async function readSlugIndex(): Promise<Record<string, SyndicatedSlugIndexEntry>> {
+  if (memorySlugIndex && Date.now() - memoryCacheAt < MEMORY_CACHE_MS) {
+    return memorySlugIndex
+  }
+
+  if (!hasSupabaseAdminConfig()) {
+    return Object.fromEntries(runtimeSlugIndex.entries())
+  }
+
+  try {
+    const supabase = createSupabaseAdminClient()
+    const { data, error } = await supabase.from('settings').select('value').eq('key', SLUG_INDEX_KEY).maybeSingle()
+    if (error || !data?.value || typeof data.value !== 'object' || Array.isArray(data.value)) {
+      memorySlugIndex = Object.fromEntries(runtimeSlugIndex.entries())
+      return memorySlugIndex
+    }
+    memorySlugIndex = data.value as Record<string, SyndicatedSlugIndexEntry>
+    return memorySlugIndex
+  } catch {
+    return Object.fromEntries(runtimeSlugIndex.entries())
+  }
+}
+
+async function writeSlugIndex(index: Record<string, SyndicatedSlugIndexEntry>) {
+  memorySlugIndex = index
+  for (const [slug, entry] of Object.entries(index)) {
+    runtimeSlugIndex.set(slug, entry)
+  }
+
+  if (!hasSupabaseAdminConfig()) return
+
+  try {
+    const supabase = createSupabaseAdminClient()
+    await supabase.from('settings').upsert({
+      key: SLUG_INDEX_KEY,
+      value: index,
+      updated_at: new Date().toISOString(),
+    })
+  } catch {
+    // Best-effort slug index.
+  }
+}
+
+function slugIndexEntryFromArticle(article: Article): SyndicatedSlugIndexEntry {
+  return {
+    slug: article.slug,
+    url: article.externalUrl ?? article.id ?? article.slug,
+    title: article.title,
+    description: article.dek || '',
+    imageUrl: hasRealImage(article.image) ? article.image : null,
+    source: article.author,
+    publishedAt: article.publishedAt,
+    category: article.category,
+    country: article.region !== 'Global' ? article.region : null,
+    cachedAt: new Date().toISOString(),
+  }
+}
+
+export function articleFromSlugIndex(entry: SyndicatedSlugIndexEntry): Article {
+  return {
+    id: entry.url,
+    slug: entry.slug,
+    title: entry.title,
+    dek: entry.description,
+    content: '',
+    category: (entry.category as Article['category']) || 'World',
+    image: entry.imageUrl || categoryFallbackImage((entry.category as Article['category']) || 'World', entry.slug),
+    imageCredit: entry.source,
+    author: entry.source || 'Original publisher',
+    authorRole: 'Syndicated source',
+    readingTime: 3,
+    publishedAt: entry.publishedAt || entry.cachedAt,
+    region: entry.country || 'Global',
+    readers: 0,
+    engagement: 0,
+    sentiment: 'neutral',
+    trendDelta: 12,
+    externalUrl: entry.url,
+  }
+}
+
+export async function rememberSyndicatedSlugs(articles: Article[]) {
+  const wireArticles = articles.filter((article) => article.externalUrl)
+  if (!wireArticles.length) return
+
+  const index = await readSlugIndex()
+  const next = { ...index }
+
+  for (const article of wireArticles) {
+    next[article.slug] = slugIndexEntryFromArticle(article)
+    runtimeSlugIndex.set(article.slug, next[article.slug])
+  }
+
+  const sorted = Object.values(next).sort(
+    (a, b) => new Date(b.cachedAt).getTime() - new Date(a.cachedAt).getTime(),
+  )
+  const trimmed = sorted.slice(0, MAX_SLUG_INDEX).reduce<Record<string, SyndicatedSlugIndexEntry>>((acc, entry) => {
+    acc[entry.slug] = entry
+    return acc
+  }, {})
+
+  await writeSlugIndex(trimmed)
+}
+
+export async function getSyndicatedSlugIndexEntry(slug: string) {
+  const runtime = runtimeSlugIndex.get(slug)
+  if (runtime) return runtime
+  const index = await readSlugIndex()
+  return index[slug]
+}
 
 async function readCache(): Promise<Record<string, SyndicatedRecord>> {
   if (memoryCache && Date.now() - memoryCacheAt < MEMORY_CACHE_MS) {
@@ -95,7 +226,16 @@ async function readCache(): Promise<Record<string, SyndicatedRecord>> {
 
 export async function persistSyndicatedArticles(articles: Article[], enriched = false) {
   const wireArticles = articles.filter((article) => article.externalUrl)
-  if (!wireArticles.length || !hasSupabaseAdminConfig()) return
+  if (!wireArticles.length) return
+
+  await rememberSyndicatedSlugs(wireArticles)
+
+  if (!hasSupabaseAdminConfig()) {
+    for (const article of wireArticles) {
+      runtimeSlugIndex.set(article.slug, slugIndexEntryFromArticle(article))
+    }
+    return
+  }
 
   const existing = await readCache()
   const next = { ...existing }
