@@ -39,7 +39,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-brand-navy text-brand-navy-foreground">
+      <header className="relative z-40 bg-brand-navy text-brand-navy-foreground">
         <div className="jox-container border-b border-white/10 py-2.5">
           <div className="flex items-center justify-between text-xs text-white/70">
             <p>{editionDate()}</p>
