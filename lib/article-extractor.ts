@@ -236,8 +236,8 @@ async function extractFromSiteRss(url: string) {
       if (!link) continue
       if (normalizeArticlePath(link) !== targetPath && !link.includes(targetPath)) continue
 
-      const content = cleanWireExcerpt(extractRssItemContent(item[1]))
-      if (syndicatedWordCount(content) >= 80 && isSyndicatedContentComplete(content)) {
+      const content = usableExtractedContent(cleanWireExcerpt(extractRssItemContent(item[1])))
+      if (content) {
         return {
           content,
           imageCredit: undefined as string | undefined,

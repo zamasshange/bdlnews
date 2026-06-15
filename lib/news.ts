@@ -10,9 +10,9 @@ import {
   categoryLabelFromSlug,
   getCategoryFetchConfig,
 } from '@/lib/category-external'
-import { getCachedSyndicatedArticles, getSyndicatedArticleFromCache, persistSyndicatedArticles } from '@/lib/syndicated-cache'
-import { cleanWireExcerpt, isPaidPlanPlaceholder, isSyndicatedContentComplete } from '@/lib/syndicated-content'
-import { enrichSyndicatedArticle } from '@/lib/syndicated-enrich'
+import { getCachedSyndicatedArticles, getSyndicatedArticleFromCache, getSyndicatedSlugIndexEntry, articleFromSlugIndex, persistSyndicatedArticles } from '@/lib/syndicated-cache'
+import { cleanWireExcerpt, isGarbageArticleContent, isPaidPlanPlaceholder, isSyndicatedContentComplete, sanitizeArticleBody } from '@/lib/syndicated-content'
+import { enrichSyndicatedArticle, enrichSyndicatedArticleFast } from '@/lib/syndicated-enrich'
 import { ensureArticleImage, hasRealImage } from '@/lib/feed-images'
 import type { ArticleRow } from '@/lib/supabase/types'
 
@@ -188,6 +188,11 @@ async function findExternalArticleBySlug(slug: string) {
   const fromCache = cached.find((article) => article.slug === slug)
   if (fromCache) return fromCache
 
+  const indexEntry = await getSyndicatedSlugIndexEntry(slug)
+  if (indexEntry) {
+    return articleFromSlugIndex(indexEntry)
+  }
+
   try {
     const results = await fetchExternalNews({ provider: 'all' })
     let found: Article | undefined
@@ -212,13 +217,42 @@ async function findExternalArticleBySlug(slug: string) {
   }
 }
 
+function hasGoodWireBody(content?: string | null) {
+  return Boolean(content && isSyndicatedContentComplete(content) && !isGarbageArticleContent(content))
+}
+
 async function resolveSyndicatedArticle(article: Article) {
   if (!article.externalUrl) return article
-  const enriched = await enrichSyndicatedArticle(article)
-  const withImage = await ensureArticleImage(enriched)
-  if (withImage.image !== enriched.image && hasRealImage(withImage.image)) {
+
+  if (hasGoodWireBody(article.content)) {
+    if (hasRealImage(article.image)) return article
+    return Promise.race([
+      ensureArticleImage(article),
+      new Promise<Article>((resolve) => setTimeout(() => resolve(article), 1500)),
+    ])
+  }
+
+  const enriched = await enrichSyndicatedArticleFast(article, 4000)
+  const cleaned = {
+    ...enriched,
+    content: sanitizeArticleBody(enriched.content) || '',
+  }
+
+  if (!hasGoodWireBody(cleaned.content)) {
+    void enrichSyndicatedArticle(article).then((full) => persistSyndicatedArticles([full], hasGoodWireBody(full.content)))
+  }
+
+  if (hasRealImage(cleaned.image)) return cleaned
+
+  const withImage = await Promise.race([
+    ensureArticleImage(cleaned),
+    new Promise<Article>((resolve) => setTimeout(() => resolve(cleaned), 1500)),
+  ])
+
+  if (withImage.image !== cleaned.image && hasRealImage(withImage.image)) {
     await persistSyndicatedArticles([withImage])
   }
+
   return withImage
 }
 
@@ -336,6 +370,10 @@ export async function getPublishedArticles(limit = 50): Promise<Article[]> {
 
   if (error || !data?.length) return []
   return data.map((row) => mapArticle(row as ArticleRow))
+}
+
+export async function getWireArticleBySlug(slug: string) {
+  return findExternalArticleBySlug(slug)
 }
 
 export async function getArticleBySlug(slug: string): Promise<Article | undefined> {

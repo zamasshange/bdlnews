@@ -1,8 +1,9 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { FormattedParagraph } from '@/components/article/formatted-paragraph'
 import { splitParagraphs } from '@/lib/content-segments'
-import { isPersistedStubContent } from '@/lib/syndicated-content'
+import { isGarbageArticleContent, isPersistedStubContent, isSyndicatedContentComplete } from '@/lib/syndicated-content'
 import { cn } from '@/lib/utils'
 
 type ContentBlock = Record<string, unknown> & {
@@ -20,6 +21,10 @@ function paragraphClassName(isWireStory: boolean) {
     'text-lg leading-8 text-foreground',
     isWireStory && 'font-serif text-[1.05rem] leading-9 text-foreground/95',
   )
+}
+
+function isUsableParagraph(text: string) {
+  return text.trim().length > 40 && !isPersistedStubContent(text) && !isGarbageArticleContent(text)
 }
 
 function renderBlock(block: ContentBlock, index: number, articleTitle: string, isWireStory: boolean) {
@@ -107,13 +112,50 @@ export function ArticleBodyContent({
   article,
   contentBlocks,
   isWireStory,
+  slug,
 }: {
   article: { title: string; dek?: string; content?: string | null }
   contentBlocks: ContentBlock[] | null
   isWireStory: boolean
+  slug?: string
 }) {
-  const rawContent = article.content ?? ''
-  const paragraphs = splitParagraphs(rawContent).filter((paragraph) => !isPersistedStubContent(paragraph))
+  const [body, setBody] = useState(article.content ?? '')
+  const [loading, setLoading] = useState(false)
+
+  const needsEnrichment =
+    isWireStory &&
+    Boolean(slug) &&
+    (!isSyndicatedContentComplete(body) || isGarbageArticleContent(body))
+
+  useEffect(() => {
+    setBody(article.content ?? '')
+  }, [article.content])
+
+  useEffect(() => {
+    if (!needsEnrichment || !slug) return
+
+    let active = true
+    setLoading(true)
+
+    fetch(`/api/syndicated/enrich?slug=${encodeURIComponent(slug)}`)
+      .then((res) => res.json())
+      .then((payload) => {
+        if (!active) return
+        if (payload.content && isSyndicatedContentComplete(payload.content) && !isGarbageArticleContent(payload.content)) {
+          setBody(payload.content)
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [needsEnrichment, slug])
+
+  const paragraphs = splitParagraphs(body).filter(isUsableParagraph)
   const showLead =
     article.dek &&
     !contentBlocks &&
@@ -145,6 +187,34 @@ export function ArticleBodyContent({
         {paragraphs.map((paragraph, index) => (
           <FormattedParagraph key={index} text={paragraph} className={className} />
         ))}
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="article-body space-y-4">
+        {article.dek ? (
+          <p className="border-l-4 border-primary pl-5 text-xl leading-relaxed text-foreground md:text-2xl">
+            {article.dek}
+          </p>
+        ) : null}
+        <div className="space-y-3">
+          <div className="h-4 w-full animate-pulse rounded bg-muted" />
+          <div className="h-4 w-[92%] animate-pulse rounded bg-muted" />
+          <div className="h-4 w-[88%] animate-pulse rounded bg-muted" />
+          <p className="pt-2 text-sm text-muted-foreground">Loading the full story…</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (article.dek) {
+    return (
+      <div className="article-body space-y-8">
+        <p className="border-l-4 border-primary pl-5 text-xl leading-relaxed text-foreground md:text-2xl">
+          {article.dek}
+        </p>
       </div>
     )
   }

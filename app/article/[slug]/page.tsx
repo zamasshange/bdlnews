@@ -17,7 +17,7 @@ import { getArticleBySlug, getPublishedArticles } from '@/lib/news'
 import { breadcrumbJsonLd, buildArticleMetadata, newsArticleJsonLd } from '@/lib/seo'
 
 export const revalidate = 180
-export const maxDuration = 60
+export const maxDuration = 30
 export const dynamic = 'force-dynamic'
 export const dynamicParams = true
 
@@ -221,6 +221,7 @@ export default async function ArticlePage({
               article={article}
               contentBlocks={contentBlocks}
               isWireStory={isWireStory}
+              slug={article.slug}
             />
           </div>
 
