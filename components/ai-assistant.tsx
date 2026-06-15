@@ -24,7 +24,7 @@ export function AiAssistant() {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: 'assistant',
-      text: 'Hi, I’m Sonke — your AI-powered news assistant. Ask me to summarize headlines, explain stories, or filter news for what matters to you.',
+      text: 'Hi, I’m Sonke — your live AI newsroom assistant. I read BDL’s wire feed and headlines in real time. Ask me for the biggest stories, category updates, or a quick summary.',
     },
   ])
   const [isLoading, setIsLoading] = useState(false)
@@ -116,7 +116,7 @@ export function AiAssistant() {
           >
             <div className="flex items-center justify-between border-b border-border bg-primary/5 px-4 py-3">
               <div className="flex items-center gap-2">
-                <SonkeLogo size={40} className="rounded-xl" />
+                <SonkeLogo size={40} />
                 <div className="leading-tight">
                   <p className="text-sm font-semibold">Sonke</p>
                   <p className="flex items-center gap-1 text-[11px] text-muted-foreground">

@@ -61,7 +61,7 @@ export const siteConfig = {
   social: {
     twitter: '@bdlnews',
   },
-  defaultOgImage: '/favicon.png',
+  defaultOgImage: '/bdl-news-logo.png',
   keywords: [
     'BDL News',
     'BDL News Online',

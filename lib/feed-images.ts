@@ -15,7 +15,7 @@ const CATEGORY_STOCK: Partial<Record<Category, string>> = {
   'AI News': 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1400&q=80',
 }
 
-function hasRealImage(image?: string | null) {
+export function hasRealImage(image?: string | null) {
   if (!image?.trim()) return false
   if (image.includes('placeholder')) return false
   return true

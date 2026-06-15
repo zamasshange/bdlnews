@@ -33,9 +33,12 @@ export const metadata: Metadata = {
   applicationName: siteConfig.name,
   category: 'news',
   icons: {
-    icon: '/favicon.png',
-    shortcut: '/favicon.png',
-    apple: '/favicon.png',
+    icon: [
+      { url: '/bdl-icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-light-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    shortcut: '/icon-light-32x32.png',
+    apple: '/apple-icon.png',
   },
 }
 

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { generateSonkeReply } from '@/lib/ai'
 
+export const maxDuration = 60
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
   const message = String(body.message ?? '').trim()

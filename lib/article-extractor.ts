@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { cleanWireExcerpt, syndicatedWordCount } from '@/lib/syndicated-content'
+import { cleanWireExcerpt, isSyndicatedContentComplete, looksTruncated, syndicatedWordCount } from '@/lib/syndicated-content'
 
 const FETCH_HEADERS = {
   'User-Agent':
@@ -154,6 +154,31 @@ async function fetchText(url: string, timeoutMs = 10000) {
   return response.text()
 }
 
+function extractRssItemImage(itemMarkup: string) {
+  const fromMedia =
+    itemMarkup.match(/<media:content[^>]+url=["']([^"']+)["']/i)?.[1] ??
+    itemMarkup.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i)?.[1] ??
+    itemMarkup.match(/<enclosure[^>]+url=["']([^"']+)["'][^>]+type=["']image/i)?.[1] ??
+    itemMarkup.match(/<enclosure[^>]+type=["']image[^"']*["'][^>]+url=["']([^"']+)["']/i)?.[1]
+
+  if (fromMedia?.startsWith('http')) return fromMedia
+
+  const encoded =
+    itemMarkup.match(/<content:encoded><!\[CDATA\[([\s\S]*?)\]\]><\/content:encoded>/i)?.[1] ??
+    itemMarkup.match(/<content:encoded>([\s\S]*?)<\/content:encoded>/i)?.[1]
+
+  if (!encoded) return undefined
+
+  const imgSrc =
+    encoded.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ??
+    encoded.match(/src=["']([^"']+)["']/i)?.[1]
+
+  if (!imgSrc) return undefined
+  if (imgSrc.startsWith('http')) return imgSrc
+  if (imgSrc.startsWith('//')) return `https:${imgSrc}`
+  return undefined
+}
+
 function extractRssItemContent(itemMarkup: string) {
   const encoded =
     itemMarkup.match(/<content:encoded><!\[CDATA\[([\s\S]*?)\]\]><\/content:encoded>/i)?.[1] ??
@@ -205,8 +230,12 @@ async function extractFromSiteRss(url: string) {
       if (normalizeArticlePath(link) !== targetPath && !link.includes(targetPath)) continue
 
       const content = cleanWireExcerpt(extractRssItemContent(item[1]))
-      if (syndicatedWordCount(content) >= 120) {
-        return { content, imageCredit: undefined as string | undefined }
+      if (syndicatedWordCount(content) >= 80 && isSyndicatedContentComplete(content)) {
+        return {
+          content,
+          imageCredit: undefined as string | undefined,
+          imageUrl: extractRssItemImage(item[1]),
+        }
       }
     }
   }
@@ -214,23 +243,48 @@ async function extractFromSiteRss(url: string) {
   return null
 }
 
-function extractFromHtml(html: string) {
+function resolveImageUrl(image: string | undefined, pageUrl: string) {
+  if (!image?.trim()) return undefined
+  if (image.startsWith('http')) return image
+  if (image.startsWith('//')) return `https:${image}`
+  if (image.startsWith('/')) {
+    try {
+      return `${new URL(pageUrl).origin}${image}`
+    } catch {
+      return undefined
+    }
+  }
+  return undefined
+}
+
+function extractOgImageFromHtml(html: string, pageUrl: string) {
+  const ogImage =
+    extractMeta(html, 'og:image') ||
+    extractMeta(html, 'twitter:image') ||
+    extractMeta(html, 'twitter:image:src')
+
+  return resolveImageUrl(ogImage, pageUrl)
+}
+
+function extractFromHtml(html: string, pageUrl: string) {
   const tweetUrls = extractTweetUrlsFromHtml(html)
+  const imageUrl = extractOgImageFromHtml(html, pageUrl)
   const jsonLd = extractJsonLdBody(html)
   if (jsonLd?.content) {
-    return { content: jsonLd.content, tweetUrls, imageCredit: jsonLd.imageCredit }
+    return { content: jsonLd.content, tweetUrls, imageCredit: jsonLd.imageCredit, imageUrl }
   }
 
   const content = extractParagraphsFromHtml(html)
   const ogDescription = extractMeta(html, 'og:description')
   const resolvedContent = cleanWireExcerpt(content || ogDescription)
 
-  if (!resolvedContent || resolvedContent.length < 120) return null
+  if (!resolvedContent || syndicatedWordCount(resolvedContent) < 80) return null
 
   return {
     content: resolvedContent,
     tweetUrls,
     imageCredit: extractMeta(html, 'og:image:alt') || undefined,
+    imageUrl,
   }
 }
 
@@ -238,20 +292,38 @@ export async function extractOgImageFromUrl(url: string) {
   try {
     const html = await fetchText(url, 8000)
     if (!html) return null
-
-    const ogImage =
-      extractMeta(html, 'og:image') ||
-      extractMeta(html, 'twitter:image') ||
-      extractMeta(html, 'twitter:image:src')
-
-    if (!ogImage) return null
-    if (ogImage.startsWith('http')) return ogImage
-    if (ogImage.startsWith('//')) return `https:${ogImage}`
-    if (ogImage.startsWith('/')) {
-      const origin = new URL(url).origin
-      return `${origin}${ogImage}`
-    }
+    return extractOgImageFromHtml(html, url) ?? null
+  } catch {
     return null
+  }
+}
+
+async function extractFromJinaReader(url: string) {
+  try {
+    const response = await fetch(`https://r.jina.ai/${url}`, {
+      headers: { Accept: 'text/plain' },
+      signal: AbortSignal.timeout(20000),
+      next: { revalidate: 3600 },
+    })
+    if (!response.ok) return null
+
+    const raw = await response.text()
+    const content = cleanWireExcerpt(
+      raw
+        .split('\n')
+        .filter((line) => !/^(Title:|URL Source:|Markdown Content:|Published Time:)/i.test(line.trim()))
+        .join('\n')
+        .trim(),
+    )
+
+    if (syndicatedWordCount(content) < 80 || looksTruncated(content)) return null
+
+    return {
+      content,
+      tweetUrls: [] as string[],
+      imageCredit: undefined as string | undefined,
+      imageUrl: undefined as string | undefined,
+    }
   } catch {
     return null
   }
@@ -275,20 +347,26 @@ export function contentNeedsTwitterEnhancement(content?: string | null) {
 export async function extractArticleBodyFromUrl(url: string) {
   try {
     const rssExtracted = await extractFromSiteRss(url)
-    if (rssExtracted?.content) {
+    if (rssExtracted?.content && isSyndicatedContentComplete(rssExtracted.content)) {
       return {
         content: rssExtracted.content,
         tweetUrls: [] as string[],
         imageCredit: rssExtracted.imageCredit,
+        imageUrl: rssExtracted.imageUrl,
       }
     }
 
-    const html = await fetchText(url, 8000)
+    const html = await fetchText(url, 12000)
     if (html && !/Just a moment|cf-chl|security verification/i.test(html)) {
-      const extracted = extractFromHtml(html)
-      if (extracted && syndicatedWordCount(extracted.content) >= 120) {
+      const extracted = extractFromHtml(html, url)
+      if (extracted && isSyndicatedContentComplete(extracted.content)) {
         return extracted
       }
+    }
+
+    const jinaExtracted = await extractFromJinaReader(url)
+    if (jinaExtracted?.content) {
+      return jinaExtracted
     }
 
     return null

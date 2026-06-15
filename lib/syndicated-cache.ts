@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type { Article } from '@/lib/data'
+import { categoryFallbackImage, hasRealImage } from '@/lib/feed-images'
 import { hasSupabaseAdminConfig } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 
@@ -32,7 +33,7 @@ function recordToArticle(record: SyndicatedRecord): Article {
     dek: record.description,
     content,
     category: (record.category as Article['category']) || 'World',
-    image: record.imageUrl || '/placeholder.jpg',
+    image: record.imageUrl || categoryFallbackImage((record.category as Article['category']) || 'World', record.slug),
     imageCredit: record.imageCredit || record.source,
     author: record.source || 'Original publisher',
     authorRole: 'Syndicated source',

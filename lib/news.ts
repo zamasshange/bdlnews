@@ -12,8 +12,9 @@ import {
   getCategoryFetchConfig,
 } from '@/lib/category-external'
 import { getCachedSyndicatedArticles, getSyndicatedArticleFromCache, persistSyndicatedArticles } from '@/lib/syndicated-cache'
-import { cleanWireExcerpt, isPaidPlanPlaceholder, needsSyndicatedBodyFetch } from '@/lib/syndicated-content'
-import { enrichSyndicatedArticleFast } from '@/lib/syndicated-enrich'
+import { cleanWireExcerpt, isPaidPlanPlaceholder, isSyndicatedContentComplete } from '@/lib/syndicated-content'
+import { enrichSyndicatedArticle } from '@/lib/syndicated-enrich'
+import { ensureArticleImage, hasRealImage } from '@/lib/feed-images'
 import type { ArticleRow } from '@/lib/supabase/types'
 
 const categoryFallback: Category = 'World'
@@ -39,7 +40,8 @@ function mapExternalNewsItem(row: ExternalNewsItem, forcedCategory?: Category): 
   const publishedAt = row.publishedAt || new Date().toISOString()
   const sourceName = row.source || 'Original publisher'
   const rawBody = isPaidPlanPlaceholder(row.content) ? row.description || '' : row.content || row.description || ''
-  const body = cleanWireExcerpt(rawBody) || cleanWireExcerpt(row.description) || row.description || ''
+  const cleaned = cleanWireExcerpt(rawBody) || cleanWireExcerpt(row.description) || ''
+  const body = isSyndicatedContentComplete(cleaned) ? cleaned : ''
   return {
     id: row.url,
     slug: externalArticleSlug(row.url),
@@ -201,10 +203,13 @@ async function findExternalArticleBySlug(slug: string) {
 }
 
 async function resolveSyndicatedArticle(article: Article) {
-  if (!needsSyndicatedBodyFetch(article.content)) {
-    return article
+  if (!article.externalUrl) return article
+  const enriched = await enrichSyndicatedArticle(article)
+  const withImage = await ensureArticleImage(enriched)
+  if (withImage.image !== enriched.image && hasRealImage(withImage.image)) {
+    await persistSyndicatedArticles([withImage])
   }
-  return enrichSyndicatedArticleFast(article, 12000)
+  return withImage
 }
 
 function estimateReadingTime(content?: string | null) {

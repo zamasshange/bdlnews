@@ -17,6 +17,7 @@ import { getArticleBySlug, getPublishedArticles } from '@/lib/news'
 import { breadcrumbJsonLd, buildArticleMetadata, newsArticleJsonLd } from '@/lib/seo'
 
 export const revalidate = 180
+export const maxDuration = 60
 
 export function generateStaticParams() {
   return []
@@ -218,8 +219,6 @@ export default async function ArticlePage({
               article={article}
               contentBlocks={contentBlocks}
               isWireStory={isWireStory}
-              externalUrl={article.externalUrl}
-              sourceName={article.author}
             />
           </div>
 

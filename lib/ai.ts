@@ -1,5 +1,8 @@
 import 'server-only'
 
+import { buildSonkeNewsBriefing } from '@/lib/sonke-context'
+import { siteConfig } from '@/lib/site'
+
 const apiKey = process.env.OPENROUTER_API_KEY ?? ''
 const model = process.env.OPENROUTER_MODEL ?? 'openai/gpt-4o-mini'
 const apiUrl = process.env.OPENROUTER_API_URL ?? 'https://openrouter.ai/api/v1/chat/completions'
@@ -36,16 +39,28 @@ export async function generateSonkeReply(message: string, context?: string) {
     throw new Error('OPENROUTER_API_KEY is not configured')
   }
 
+  const newsBriefing = await buildSonkeNewsBriefing()
+
   const systemPrompt = [
-    'You are Sonke, the intelligent news assistant for a news website.',
-    'Provide concise summaries, explain why stories matter, and help users filter news by topic or angle.',
-    'When article context is provided, answer based on that article — never ask the user to share or paste the article.',
-    'When asked about a story, return a short, clear answer with useful next steps or related topics.',
+    `You are Sonke, the live AI newsroom assistant for ${siteConfig.name} (${siteConfig.url}).`,
+    'On every request you receive a LIVE NEWS BRIEFING loaded from BDL wire APIs, the editorial CMS, trending rankings, and the live ticker.',
+    'This briefing is real, current site data — treat it as your primary source of truth.',
+    'NEVER say you lack real-time access, cannot browse, or do not have current news.',
+    'NEVER tell users to check other news websites, apps, or external sources for headlines.',
+    'Answer using the briefing: cite specific headlines, categories, sources, and on-site links (/article/slug).',
+    'When users ask for biggest stories, trending topics, or latest news, list concrete items from the briefing.',
+    'When article context is provided, prioritize it for article-specific questions while still using the briefing for broader context.',
+    'Be concise, editorial, and confident. You are embedded in the newsroom — act like it.',
   ].join(' ')
 
-  const userContent = context
-    ? `Article context:\n${context}\n\nRequest: ${message}`
-    : message
+  const userContent = [
+    '=== LIVE NEWS BRIEFING (use this for all news questions) ===',
+    newsBriefing,
+    context ? `\n=== ARTICLE CONTEXT ===\n${context}` : '',
+    `\n=== USER REQUEST ===\n${message}`,
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   const response = await fetch(apiUrl, {
     method: 'POST',
@@ -59,15 +74,17 @@ export async function generateSonkeReply(message: string, context?: string) {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent },
       ],
-      max_tokens: 512,
-      temperature: 0.3,
+      max_tokens: 1024,
+      temperature: 0.35,
     }),
   })
 
   if (!response.ok) {
     const bodyText = await response.text().catch(() => '')
-    const message = bodyText ? `OpenRouter request failed: ${response.status} ${bodyText}` : `OpenRouter request failed: ${response.status}`
-    throw new Error(message)
+    const errorMessage = bodyText
+      ? `OpenRouter request failed: ${response.status} ${bodyText}`
+      : `OpenRouter request failed: ${response.status}`
+    throw new Error(errorMessage)
   }
 
   let payload: any

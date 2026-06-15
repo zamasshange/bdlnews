@@ -31,15 +31,13 @@ export function looksTruncated(text?: string | null) {
   if (trimmed.endsWith('...') || trimmed.endsWith('…')) return true
   if (MID_TRUNCATION.test(trimmed)) return true
   if (WORDPRESS_FOOTER.test(trimmed)) return true
-  return trimmed.split(/\s+/).filter(Boolean).length < 90
+  return false
 }
 
 export function isSyndicatedContentComplete(content?: string | null) {
   if (!content?.trim() || isPersistedStubContent(content) || isPaidPlanPlaceholder(content)) return false
-  const words = syndicatedWordCount(content)
-  if (words < 180) return false
   if (looksTruncated(content)) return false
-  return true
+  return syndicatedWordCount(content) >= 80
 }
 
 export function needsSyndicatedBodyFetch(content?: string | null) {
