@@ -9,8 +9,7 @@ import { type Article, type Category } from '@/lib/data'
 import { StoryHeadline } from '@/components/story-headline'
 import { buildExternalOnlyFeed, buildHomeFeed } from '@/lib/home-feed'
 import { categoryPathFromName } from '@/lib/category-paths'
-import { getCachedSyndicatedArticles } from '@/lib/syndicated-cache'
-import { getLiveUpdates, getPublishedArticles, getTrendingArticles } from '@/lib/news'
+import { getLatestWireArticles, getLiveUpdates, getPublishedArticles, getTrendingArticles } from '@/lib/news'
 import { JsonLd } from '@/components/seo/json-ld'
 import { buildPageMetadata, homepageItemListJsonLd } from '@/lib/seo'
 import { coreSearchKeywords } from '@/lib/seo-keywords'
@@ -41,7 +40,7 @@ export const metadata = {
   },
 }
 
-export const revalidate = 120
+export const revalidate = 60
 
 function pickByCategory(articles: Article[], category: Category, count: number) {
   return articles.filter((article) => article.category === category).slice(0, count)
@@ -52,7 +51,7 @@ export default async function HomePage() {
     getPublishedArticles(40),
     getLiveUpdates(),
     getTrendingArticles(),
-    getCachedSyndicatedArticles(160),
+    getLatestWireArticles(160),
   ])
 
   const feed = articles.length

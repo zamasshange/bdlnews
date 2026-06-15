@@ -1,9 +1,9 @@
 'use client'
 
-import Image from 'next/image'
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { X, ArrowUp } from 'lucide-react'
+import { SonkeLogo } from '@/components/sonke-logo'
 import { cn } from '@/lib/utils'
 
 interface Msg {
@@ -116,14 +116,7 @@ export function AiAssistant() {
           >
             <div className="flex items-center justify-between border-b border-border bg-primary/5 px-4 py-3">
               <div className="flex items-center gap-2">
-                <Image
-                  src="/favicon.png"
-                  alt="Sonke icon"
-                  width={40}
-                  height={40}
-                  className="rounded-xl"
-                  unoptimized
-                />
+                <SonkeLogo size={40} className="rounded-xl" />
                 <div className="leading-tight">
                   <p className="text-sm font-semibold">Sonke</p>
                   <p className="flex items-center gap-1 text-[11px] text-muted-foreground">

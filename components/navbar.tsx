@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { Menu, Search, Sparkles, X } from 'lucide-react'
+import { Menu, Search, X } from 'lucide-react'
 import { Logo } from '@/components/logo'
+import { SonkeLogo } from '@/components/sonke-logo'
 import { SearchOverlay } from '@/components/search-overlay'
 import { Button } from '@/components/ui/button'
 import { NAV_LINKS } from '@/lib/data'
@@ -98,7 +99,7 @@ export function Navbar() {
                 }
                 className="hidden items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10 sm:inline-flex"
               >
-                <Sparkles className="size-4" />
+                <SonkeLogo size={16} />
                 Ask Sonke
               </button>
               <Link

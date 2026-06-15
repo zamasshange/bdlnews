@@ -135,6 +135,32 @@ export async function fetchAllExternalArticles(limit = 500): Promise<Article[]> 
   return articles
 }
 
+export async function getLatestWireArticles(limit = 120): Promise<Article[]> {
+  let fresh: Article[] = []
+
+  try {
+    const results = await fetchExternalNews({ provider: 'all' })
+    const seen = new Set<string>()
+
+    for (const item of results) {
+      if (!item.title || !item.url || seen.has(item.url)) continue
+      seen.add(item.url)
+      fresh.push(mapExternalNewsItem(item))
+    }
+
+    if (fresh.length) {
+      await persistSyndicatedArticles(fresh)
+    }
+  } catch {
+    // Fall back to the persisted wire cache below.
+  }
+
+  const cached = await getCachedSyndicatedArticles(Math.max(limit, 160))
+  const merged = dedupeArticles([...fresh, ...cached])
+  merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  return merged.slice(0, limit)
+}
+
 export async function getExternalNewsItems(query?: string, limit = 12): Promise<Article[]> {
   const slug = query ? slugifyCategory(query) : ''
   if (slug && getCategoryFetchConfig(slug)) {

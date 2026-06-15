@@ -29,7 +29,7 @@ function clean(value: unknown) {
 
 async function readJson(url: string) {
   const response = await fetch(url, {
-    next: { revalidate: 300 },
+    next: { revalidate: 60 },
     signal: AbortSignal.timeout(8000),
   })
   if (!response.ok) throw new Error(`News provider returned ${response.status}`)
