@@ -15,9 +15,9 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['news', 'magazines'],
     icons: [
       {
-        src: '/bdl-icon.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
+        src: '/favicon.png',
+        sizes: '512x512',
+        type: 'image/png',
       },
       {
         src: '/apple-icon.png',

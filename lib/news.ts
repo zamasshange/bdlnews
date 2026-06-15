@@ -162,6 +162,18 @@ export async function getLatestWireArticles(limit = 120): Promise<Article[]> {
   return merged.slice(0, limit)
 }
 
+export async function getRelatedArticles(currentSlug: string, category: Category, limit = 3): Promise<Article[]> {
+  const [wire, own] = await Promise.all([getLatestWireArticles(40), getPublishedArticles(12)])
+  const pool = dedupeArticles([...wire, ...own]).sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+  )
+
+  const sameCategory = pool.filter((item) => item.slug !== currentSlug && item.category === category)
+  const other = pool.filter((item) => item.slug !== currentSlug && item.category !== category)
+
+  return [...sameCategory, ...other].slice(0, limit)
+}
+
 export async function getExternalNewsItems(query?: string, limit = 12): Promise<Article[]> {
   const slug = query ? slugifyCategory(query) : ''
   if (slug && getCategoryFetchConfig(slug)) {

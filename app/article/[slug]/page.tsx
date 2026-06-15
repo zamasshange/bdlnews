@@ -13,7 +13,7 @@ import { ArticleViewTracker } from '@/components/tracking/article-view-tracker'
 import { JsonLd } from '@/components/seo/json-ld'
 import { categoryPath, categoryPathFromName } from '@/lib/category-paths'
 import { buildArticleContext } from '@/lib/article-text'
-import { getArticleBySlug, getPublishedArticles } from '@/lib/news'
+import { getArticleBySlug, getRelatedArticles } from '@/lib/news'
 import { breadcrumbJsonLd, buildArticleMetadata, newsArticleJsonLd } from '@/lib/seo'
 
 export const revalidate = 180
@@ -43,8 +43,10 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const [article, articles] = await Promise.all([getArticleBySlug(slug), getPublishedArticles(8)])
+  const article = await getArticleBySlug(slug)
   if (!article) notFound()
+
+  const related = await getRelatedArticles(article.slug, article.category, 3)
 
   const contentBlocks = (() => {
     try {
@@ -54,12 +56,6 @@ export default async function ArticlePage({
       return null
     }
   })()
-
-  const related = articles
-    .filter((item) => item.slug !== article.slug && item.category === article.category)
-    .concat(articles.filter((item) => item.slug !== article.slug && item.category !== article.category))
-    .slice(0, 3)
-
   const isWireStory = Boolean(article.externalUrl)
   const articleContext = buildArticleContext(article)
 

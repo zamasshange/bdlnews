@@ -14,7 +14,7 @@ export function SonkeLogo({ className, size = 20 }: SonkeLogoProps) {
       alt="Sonke AI"
       width={size}
       height={size}
-      className={cn('shrink-0 rounded-md', className)}
+      className={cn('shrink-0 object-contain', className)}
       unoptimized
     />
   )
