@@ -289,6 +289,74 @@ function mapArticleRow(row: Record<string, any>): AdminArticleRow {
   }
 }
 
+export async function getDashboardOverviewLight(): Promise<Pick<DashboardOverview, 'stats' | 'publishedArticles' | 'wireCount'>> {
+  const emptyStats = {
+    totalArticles: 0,
+    publishedArticles: 0,
+    draftArticles: 0,
+    scheduledArticles: 0,
+    breakingStories: 0,
+    totalAuthors: 0,
+    totalViews: 0,
+    todayViews: 0,
+    activeReaders: 0,
+  }
+
+  if (!hasSupabaseAdminConfig()) {
+    return { stats: emptyStats, publishedArticles: [], wireCount: 0 }
+  }
+
+  const supabase = createSupabaseAdminClient()
+  const table = supabaseNewsTable
+
+  const [publishedRes, totalRes, draftRes] = await Promise.all([
+    safeQueryResponse(
+      table === 'articles'
+        ? supabase
+            .from('articles')
+            .select('*, categories(name)')
+            .in('status', ['published', 'breaking'])
+            .order('publish_date', { ascending: false })
+            .limit(8)
+        : supabase.from(table).select('*').order('created_at', { ascending: false }).limit(8),
+    ),
+    safeQueryResponse(supabase.from(table).select('id', { count: 'exact', head: true })),
+    safeQueryResponse(supabase.from(table).select('id', { count: 'exact', head: true }).eq('status', 'draft')),
+  ])
+
+  const publishedArticles = ((publishedRes?.data ?? []) as Record<string, any>[]).map(mapArticleRow)
+
+  return {
+    stats: {
+      ...emptyStats,
+      totalArticles: totalRes?.count ?? publishedArticles.length,
+      publishedArticles: publishedArticles.length,
+      draftArticles: draftRes?.count ?? 0,
+    },
+    publishedArticles,
+    wireCount: 0,
+  }
+}
+
+export async function getAdminCategories() {
+  if (!hasSupabaseAdminConfig()) {
+    const fallbackCategories = NAV_LINKS.filter((name) => name !== 'Home').map((name) => ({
+      id: name.toLowerCase().replace(/\s+/g, '-'),
+      name,
+    }))
+    return fallbackCategories
+  }
+
+  const supabase = createSupabaseAdminClient()
+  const { data } = await safeQueryResponse(supabase.from('categories').select('*').order('name'))
+  if (data?.length) return data
+
+  return NAV_LINKS.filter((name) => name !== 'Home').map((name) => ({
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    name,
+  }))
+}
+
 export async function getDashboardOverview(): Promise<DashboardOverview> {
   const [stats, editorial, collections, wireArticles] = await Promise.all([
     getDashboardStats(),
@@ -323,6 +391,20 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
     liveUpdates,
     wireCount: wireArticles.length,
   }
+}
+
+export async function getAdminArticlesList() {
+  if (!hasSupabaseAdminConfig()) return []
+
+  const table = supabaseNewsTable
+  const supabase = createSupabaseAdminClient()
+  const { data } = await safeQueryResponse(
+    table === 'articles'
+      ? supabase.from('articles').select('*, authors(name), categories(name)').order('updated_at', { ascending: false }).limit(100)
+      : supabase.from(table).select('*').order('created_at', { ascending: false }).limit(100),
+  )
+
+  return table === 'articles' ? data ?? [] : (data ?? []).map(normalizeAdminArticle)
 }
 
 export async function getAdminCollections() {

@@ -1,13 +1,13 @@
 import { ArticleForm } from '@/components/admin/article-form'
 import { ProtectedAdminPage } from '@/components/admin/protected-admin-page'
 import { AdminPageHeader } from '@/components/admin/ui'
-import { getAdminCollections } from '@/lib/admin/data'
+import { getAdminCategories } from '@/lib/admin/data'
 
 export default async function CreateArticlePage() {
-  const { categories } = await getAdminCollections()
+  const categories = await getAdminCategories()
   return (
     <ProtectedAdminPage>
-      <AdminPageHeader title="Create Article" description="Compose a story and choose whether it stays draft, goes to review, schedules, publishes, or breaks live." />
+      <AdminPageHeader title="Publish Article" description="Write your story and publish it live on BDL News." />
       <ArticleForm categories={categories} />
     </ProtectedAdminPage>
   )

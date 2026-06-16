@@ -12,7 +12,32 @@ export const roleLabels: Record<UserRole, string> = {
   journalist: 'Journalist',
 }
 
+const LOCAL_ADMIN_USER = {
+  auth: {
+    id: 'local-admin',
+    email: 'editor@bdlnews.online',
+    user_metadata: { full_name: 'BDL Editor' },
+    created_at: new Date().toISOString(),
+  },
+  profile: {
+    id: 'local-admin',
+    email: 'editor@bdlnews.online',
+    full_name: 'BDL Editor',
+    role: 'admin' as UserRole,
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+  },
+  profileExists: false,
+}
+
+/** Auth is off by default. Set ADMIN_AUTH_ENABLED=true to require Supabase sign-in. */
+export function isAdminAuthEnabled() {
+  return process.env.ADMIN_AUTH_ENABLED === 'true'
+}
+
 export async function getAdminUser() {
+  if (!isAdminAuthEnabled()) return LOCAL_ADMIN_USER
+
   if (!hasSupabaseConfig()) return null
 
   const client = await createSupabaseServerClient()

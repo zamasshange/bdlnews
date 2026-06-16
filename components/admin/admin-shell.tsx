@@ -1,9 +1,6 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { BarChart3, ExternalLink, FileText, ImageIcon, LayoutDashboard, MessageSquare, Radio, Settings, Tags, UserPen, Users } from 'lucide-react'
 import { AdminNavLink } from '@/components/admin/admin-nav-link'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/logo'
 
 const nav = [
@@ -18,13 +15,6 @@ const nav = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
-
-async function signOut() {
-  'use server'
-  const supabase = await createSupabaseServerClient()
-  await supabase.auth.signOut()
-  redirect('/admin/login')
-}
 
 export function AdminShell({
   children,
@@ -75,14 +65,9 @@ export function AdminShell({
               </Link>
             ))}
           </div>
-          <div className="ml-auto flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-semibold">{userName}</p>
-              <p className="text-xs text-slate-500">{role}</p>
-            </div>
-            <form action={signOut}>
-              <Button variant="outline" size="sm">Sign out</Button>
-            </form>
+          <div className="ml-auto text-right">
+            <p className="text-sm font-semibold">{userName}</p>
+            <p className="text-xs text-slate-500">{role}</p>
           </div>
         </header>
         <main className="p-4 md:p-8">{children}</main>

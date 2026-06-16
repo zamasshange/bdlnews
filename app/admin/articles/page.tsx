@@ -4,15 +4,15 @@ import { deleteArticle, duplicateArticle, updateArticleStatus } from '@/app/admi
 import { ProtectedAdminPage } from '@/components/admin/protected-admin-page'
 import { AdminPageHeader, AdminTable, Td, Th } from '@/components/admin/ui'
 import { Button } from '@/components/ui/button'
-import { getAdminCollections } from '@/lib/admin/data'
+import { getAdminArticlesList } from '@/lib/admin/data'
 import { supabaseNewsTable } from '@/lib/supabase/config'
 
 export default async function AdminArticlesPage() {
-  const { articles } = await getAdminCollections()
+  const articles = await getAdminArticlesList()
 
   return (
     <ProtectedAdminPage>
-      <AdminPageHeader title="Articles" description="Create, edit, schedule, publish, duplicate, and archive BDL stories." actionHref="/admin/articles/create" actionLabel="Create article" />
+      <AdminPageHeader title="Articles" description="Publish and manage BDL stories." actionHref="/admin/articles/create" actionLabel="Publish article" />
       <AdminTable>
         <thead><tr><Th>Headline</Th><Th>Category</Th><Th>Author</Th><Th>Status</Th><Th>Publish Date</Th><Th>Actions</Th></tr></thead>
         <tbody>

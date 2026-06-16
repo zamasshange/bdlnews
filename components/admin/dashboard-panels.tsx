@@ -14,7 +14,7 @@ import { formatCount } from '@/lib/data'
 import { AdminTable, StatCard, Td, Th } from '@/components/admin/ui'
 
 const quickActions = [
-  { href: '/admin/articles/create', label: 'Write story', icon: Plus },
+  { href: '/admin/articles/create', label: 'Publish story', icon: Plus },
   { href: '/admin/live-news', label: 'Live update', icon: Radio },
   { href: '/admin/comments', label: 'Moderate comments', icon: MessageSquareWarning },
   { href: '/admin/media', label: 'Upload media', icon: Sparkles },

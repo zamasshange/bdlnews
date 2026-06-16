@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { isAdminAuthEnabled } from '@/lib/admin/auth'
 import { LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { hasSupabaseConfig } from '@/lib/supabase/config'
@@ -16,6 +17,10 @@ async function login(formData: FormData) {
 }
 
 export default function AdminLoginPage() {
+  if (!isAdminAuthEnabled()) {
+    redirect('/admin')
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f7f8fa] p-4">
       <form action={login} className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm">

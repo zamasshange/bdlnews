@@ -7,7 +7,7 @@ import { Field, inputClass } from '@/components/admin/ui'
 import { Button } from '@/components/ui/button'
 import { AnalyticsEvents, trackEvent } from '@/lib/analytics'
 
-const statuses = ['draft', 'review', 'scheduled', 'published', 'archived', 'breaking']
+const statuses = ['draft', 'published', 'breaking']
 
 export function ArticleForm({
   article,
@@ -16,6 +16,8 @@ export function ArticleForm({
   article?: Record<string, any> | null
   categories: Record<string, any>[]
 }) {
+  const isNew = !article?.id
+  const defaultStatus = article?.status ?? (isNew ? 'published' : 'draft')
   const formRef = useRef<HTMLFormElement>(null)
   const [articleId, setArticleId] = useState(article?.id ?? '')
   const [categoryName, setCategoryName] = useState(article?.category ?? article?.categories?.name ?? '')
@@ -159,7 +161,7 @@ export function ArticleForm({
           <input type="hidden" name="category_name" value={categoryName} />
         </Field>
         <Field label="Status">
-          <select className={inputClass} name="status" defaultValue={article?.status ?? 'draft'}>
+          <select className={inputClass} name="status" defaultValue={defaultStatus}>
             {statuses.map((status) => (
               <option key={status} value={status}>{status}</option>
             ))}
@@ -210,7 +212,7 @@ export function ArticleForm({
       </Field>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-slate-500">{isPending ? 'Autosave queued...' : autosaveState}</p>
-        <Button type="submit">Save article</Button>
+        <Button type="submit">{defaultStatus === 'published' || defaultStatus === 'breaking' ? 'Publish article' : 'Save article'}</Button>
       </div>
     </form>
   )
