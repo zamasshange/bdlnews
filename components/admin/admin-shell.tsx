@@ -1,20 +1,7 @@
 import Link from 'next/link'
-import { BarChart3, ExternalLink, FileText, ImageIcon, LayoutDashboard, MessageSquare, Radio, Settings, Tags, UserPen, Users } from 'lucide-react'
-import { AdminNavLink } from '@/components/admin/admin-nav-link'
+import { ExternalLink } from 'lucide-react'
+import { AdminMobileNav, AdminSidebarNav } from '@/components/admin/admin-nav-link'
 import { Logo } from '@/components/logo'
-
-const nav = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/articles', label: 'Articles', icon: FileText },
-  { href: '/admin/live-news', label: 'Live News', icon: Radio },
-  { href: '/admin/media', label: 'Media', icon: ImageIcon },
-  { href: '/admin/authors', label: 'Authors', icon: UserPen },
-  { href: '/admin/categories', label: 'Categories', icon: Tags },
-  { href: '/admin/comments', label: 'Comments', icon: MessageSquare },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
-]
 
 export function AdminShell({
   children,
@@ -39,11 +26,7 @@ export function AdminShell({
             </div>
           </div>
         </div>
-        <nav className="grid gap-1 p-3">
-          {nav.map((item) => (
-            <AdminNavLink key={item.href} href={item.href} label={item.label} icon={item.icon} />
-          ))}
-        </nav>
+        <AdminSidebarNav />
         <div className="border-t border-slate-200 p-3">
           <Link
             href="/"
@@ -58,13 +41,7 @@ export function AdminShell({
 
       <div className="lg:pl-64">
         <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-8">
-          <div className="flex items-center gap-2 overflow-x-auto lg:hidden">
-            {nav.slice(0, 6).map((item) => (
-              <Link key={item.href} href={item.href} className="rounded-md p-2 text-slate-600 hover:bg-slate-100">
-                <item.icon className="size-4" />
-              </Link>
-            ))}
-          </div>
+          <AdminMobileNav />
           <div className="ml-auto text-right">
             <p className="text-sm font-semibold">{userName}</p>
             <p className="text-xs text-slate-500">{role}</p>

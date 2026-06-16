@@ -2,8 +2,55 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { LucideIcon } from 'lucide-react'
+import {
+  BarChart3,
+  FileText,
+  ImageIcon,
+  LayoutDashboard,
+  MessageSquare,
+  Radio,
+  Settings,
+  Tags,
+  UserPen,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const nav = [
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/articles', label: 'Articles', icon: FileText },
+  { href: '/admin/live-news', label: 'Live News', icon: Radio },
+  { href: '/admin/media', label: 'Media', icon: ImageIcon },
+  { href: '/admin/authors', label: 'Authors', icon: UserPen },
+  { href: '/admin/categories', label: 'Categories', icon: Tags },
+  { href: '/admin/comments', label: 'Comments', icon: MessageSquare },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
+] as const
+
+export function AdminSidebarNav() {
+  return (
+    <nav className="grid gap-1 p-3">
+      {nav.map((item) => (
+        <AdminNavLink key={item.href} href={item.href} label={item.label} icon={item.icon} />
+      ))}
+    </nav>
+  )
+}
+
+export function AdminMobileNav() {
+  return (
+    <div className="flex items-center gap-2 overflow-x-auto lg:hidden">
+      {nav.slice(0, 6).map((item) => (
+        <Link key={item.href} href={item.href} className="rounded-md p-2 text-slate-600 hover:bg-slate-100">
+          <item.icon className="size-4" />
+        </Link>
+      ))}
+    </div>
+  )
+}
 
 export function AdminNavLink({
   href,
