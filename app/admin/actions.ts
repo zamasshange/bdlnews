@@ -3,9 +3,37 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireAdminUser } from '@/lib/admin/auth'
+import { canTrackAdminActor, isUuid } from '@/lib/admin/query'
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import type { ArticleStatus, CommentStatus, UserRole } from '@/lib/supabase/types'
+
+export type SaveArticleState = {
+  error?: string
+}
+
+function isRedirectError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'digest' in error &&
+    String((error as { digest?: string }).digest).startsWith('NEXT_REDIRECT')
+  )
+}
+
+async function resolveCategoryId(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  formData: FormData,
+) {
+  const rawId = String(formData.get('category_id') ?? '').trim()
+  if (isUuid(rawId)) return rawId
+
+  const categoryName = String(formData.get('category_name') ?? '').trim()
+  if (!categoryName || supabaseNewsTable !== 'articles') return null
+
+  const { data } = await supabase.from('categories').select('id').ilike('name', categoryName).maybeSingle()
+  return data?.id ?? null
+}
 
 function slugify(value: string) {
   return value
@@ -49,88 +77,102 @@ function revalidateNews() {
   revalidatePath('/[slug]', 'page')
 }
 
-export async function saveArticle(formData: FormData) {
-  const user = await requireAdminUser()
-  if (!hasSupabaseAdminConfig()) {
-    throw new Error('Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.')
-  }
-  const supabase = createSupabaseAdminClient()
-  const table = supabaseNewsTable
-  const isLegacyArticlesTable = table === 'articles'
-  const id = String(formData.get('id') ?? '')
-  const headline = String(formData.get('headline') ?? '').trim()
-  const status = String(formData.get('status') ?? 'draft') as ArticleStatus
-  const publishDate = String(formData.get('publish_date') || '')
-  const keywords = list(formData.get('seo_keywords'))
-  const tagNames = list(formData.get('tags')).length ? list(formData.get('tags')) : keywords
-
-  const basePayload: Record<string, any> = {
-    headline,
-    subtitle: String(formData.get('subtitle') ?? ''),
-    slug: slugify(String(formData.get('slug') || headline)),
-    content: String(formData.get('content') ?? ''),
-    featured_image: String(formData.get('featured_image') ?? ''),
-    seo_title: String(formData.get('seo_title') ?? ''),
-    seo_description: String(formData.get('seo_description') ?? ''),
-    publish_date: publishDate || (status === 'published' || status === 'breaking' ? new Date().toISOString() : null),
-    updated_at: new Date().toISOString(),
-  }
-
-  const fallbackPayload: Record<string, any> = {
-    title: headline,
-    content: String(formData.get('content') ?? ''),
-  }
-  const fallbackFeaturedImage = String(formData.get('featured_image') ?? '').trim()
-  if (fallbackFeaturedImage) fallbackPayload.featured_image = fallbackFeaturedImage
-  const fallbackCategoryName = String(formData.get('category_name') ?? '').trim()
-  if (fallbackCategoryName) fallbackPayload.category = fallbackCategoryName
-  const fallbackSeoTitle = String(formData.get('seo_title') ?? '').trim()
-  if (fallbackSeoTitle) fallbackPayload.seo_title = fallbackSeoTitle
-  const fallbackSeoDescription = String(formData.get('seo_description') ?? '').trim()
-  if (fallbackSeoDescription) fallbackPayload.seo_description = fallbackSeoDescription
-  const fallbackPublishDate = String(formData.get('publish_date') ?? '').trim()
-  if (fallbackPublishDate) fallbackPayload.publish_date = fallbackPublishDate
-
-  const payload: Record<string, any> = isLegacyArticlesTable
-    ? {
-        ...basePayload,
-        gallery_images: list(formData.get('gallery_images')),
-        video_url: String(formData.get('video_url') ?? ''),
-        author_id: String(formData.get('author_id') ?? '') || null,
-        category_id: String(formData.get('category_id') ?? '') || null,
-        seo_keywords: keywords,
-        status,
-      }
-    : fallbackPayload
-
-  if (user.profileExists && isLegacyArticlesTable) {
-    payload.updated_by = user.auth.id
-    if (!id) payload.created_by = user.auth.id
-  }
-
-  const query = id
-    ? supabase.from(table).update(payload).eq('id', id).select('id').single()
-    : supabase.from(table).insert(payload).select('id').single()
-
-  const result = await query
-  if (result.error) {
-    const message = String(result.error.message ?? 'An unknown error occurred while saving the article.')
-    if (
-      message.includes('Could not find the table') ||
-      message.includes('does not exist') ||
-      result.error.code === 'PGRST205' ||
-      result.error.code === '42703'
-    ) {
-      throw new Error(`Failed to save article. The configured Supabase table "${table}" does not match the admin article schema. Ensure SUPABASE_NEWS_TABLE points to a valid article table or create the expected 'articles' schema in Supabase.`)
+export async function saveArticle(_prev: SaveArticleState | null, formData: FormData): Promise<SaveArticleState> {
+  try {
+    const user = await requireAdminUser()
+    if (!hasSupabaseAdminConfig()) {
+      return { error: 'Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.' }
     }
-    throw new Error(message)
+
+    const supabase = createSupabaseAdminClient()
+    const table = supabaseNewsTable
+    const isLegacyArticlesTable = table === 'articles'
+    const id = String(formData.get('id') ?? '')
+    const headline = String(formData.get('headline') ?? '').trim()
+    if (!headline) return { error: 'Headline is required.' }
+
+    const status = String(formData.get('status') ?? 'draft') as ArticleStatus
+    const publishDate = String(formData.get('publish_date') || '')
+    const keywords = list(formData.get('seo_keywords'))
+    const tagNames = list(formData.get('tags')).length ? list(formData.get('tags')) : keywords
+    const categoryId = await resolveCategoryId(supabase, formData)
+    const categoryName = String(formData.get('category_name') ?? '').trim()
+
+    const basePayload: Record<string, any> = {
+      headline,
+      subtitle: String(formData.get('subtitle') ?? ''),
+      slug: slugify(String(formData.get('slug') || headline)),
+      content: String(formData.get('content') ?? ''),
+      featured_image: String(formData.get('featured_image') ?? ''),
+      seo_title: String(formData.get('seo_title') ?? ''),
+      seo_description: String(formData.get('seo_description') ?? ''),
+      publish_date: publishDate || (status === 'published' || status === 'breaking' ? new Date().toISOString() : null),
+      updated_at: new Date().toISOString(),
+    }
+
+    const fallbackPayload: Record<string, any> = {
+      title: headline,
+      content: String(formData.get('content') ?? ''),
+      status,
+    }
+    const fallbackFeaturedImage = String(formData.get('featured_image') ?? '').trim()
+    if (fallbackFeaturedImage) fallbackPayload.featured_image = fallbackFeaturedImage
+    if (categoryName) fallbackPayload.category = categoryName
+    const fallbackSeoTitle = String(formData.get('seo_title') ?? '').trim()
+    if (fallbackSeoTitle) fallbackPayload.seo_title = fallbackSeoTitle
+    const fallbackSeoDescription = String(formData.get('seo_description') ?? '').trim()
+    if (fallbackSeoDescription) fallbackPayload.seo_description = fallbackSeoDescription
+    const fallbackPublishDate = String(formData.get('publish_date') ?? '').trim()
+    if (fallbackPublishDate) fallbackPayload.publish_date = fallbackPublishDate
+    else if (status === 'published' || status === 'breaking') fallbackPayload.publish_date = new Date().toISOString()
+
+    const payload: Record<string, any> = isLegacyArticlesTable
+      ? {
+          ...basePayload,
+          gallery_images: list(formData.get('gallery_images')),
+          video_url: String(formData.get('video_url') ?? ''),
+          author_id: isUuid(String(formData.get('author_id') ?? '')) ? String(formData.get('author_id')) : null,
+          category_id: categoryId,
+          seo_keywords: keywords,
+          status,
+        }
+      : fallbackPayload
+
+    if (canTrackAdminActor(user.auth.id) && isLegacyArticlesTable) {
+      payload.updated_by = user.auth.id
+      if (!id) payload.created_by = user.auth.id
+    }
+
+    const query = id
+      ? supabase.from(table).update(payload).eq('id', id).select('id').single()
+      : supabase.from(table).insert(payload).select('id').single()
+
+    const result = await query
+    if (result.error) {
+      const message = String(result.error.message ?? 'An unknown error occurred while saving the article.')
+      if (
+        message.includes('Could not find the table') ||
+        message.includes('does not exist') ||
+        result.error.code === 'PGRST205' ||
+        result.error.code === '42703'
+      ) {
+        return {
+          error: `Failed to save article. The configured Supabase table "${table}" does not match the admin article schema.`,
+        }
+      }
+      return { error: message }
+    }
+
+    if (isLegacyArticlesTable) {
+      await syncArticleTags(supabase, result.data.id, tagNames)
+    }
+
+    revalidateNews()
+  } catch (error) {
+    if (isRedirectError(error)) throw error
+    return { error: error instanceof Error ? error.message : 'Failed to save article.' }
   }
 
-  if (isLegacyArticlesTable) {
-    await syncArticleTags(supabase, result.data.id, tagNames)
-  }
-
-  revalidateNews()
   redirect('/admin/articles')
 }
 

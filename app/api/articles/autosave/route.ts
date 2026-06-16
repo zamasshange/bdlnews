@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireAdminUser } from '@/lib/admin/auth'
+import { canTrackAdminActor, isUuid } from '@/lib/admin/query'
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 
@@ -46,21 +47,28 @@ export async function POST(request: Request) {
         featured_image: String(body.featured_image ?? ''),
         gallery_images: list(body.gallery_images),
         video_url: String(body.video_url ?? ''),
-        author_id: body.author_id || null,
-        category_id: body.category_id || null,
+        author_id: isUuid(String(body.author_id ?? '')) ? body.author_id : null,
+        category_id: isUuid(String(body.category_id ?? '')) ? body.category_id : null,
         seo_title: String(body.seo_title ?? ''),
         seo_description: String(body.seo_description ?? ''),
         seo_keywords: list(body.seo_keywords),
         status: body.status === 'published' || body.status === 'breaking' ? body.status : 'draft',
         publish_date: body.status === 'published' || body.status === 'breaking' ? new Date().toISOString() : null,
-        updated_by: user.auth.id,
         updated_at: new Date().toISOString(),
+        ...(canTrackAdminActor(user.auth.id) ? { updated_by: user.auth.id } : {}),
       }
     : fallbackPayload
 
   const result = body.id
     ? await supabase.from(table).update(payload).eq('id', body.id).select('id').single()
-    : await supabase.from(table).insert({ ...payload, ...(isArticlesTable ? { created_by: user.auth.id } : {}) }).select('id').single()
+    : await supabase
+        .from(table)
+        .insert({
+          ...payload,
+          ...(isArticlesTable && canTrackAdminActor(user.auth.id) ? { created_by: user.auth.id } : {}),
+        })
+        .select('id')
+        .single()
 
   if (result.error) return NextResponse.json({ error: result.error.message }, { status: 400 })
   return NextResponse.json({ id: result.data.id })

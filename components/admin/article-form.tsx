@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
-import { saveArticle } from '@/app/admin/actions'
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
+import { saveArticle, type SaveArticleState } from '@/app/admin/actions'
 import { ArticleBuilder } from '@/components/admin/article-builder'
 import { Field, inputClass } from '@/components/admin/ui'
 import { Button } from '@/components/ui/button'
@@ -12,18 +12,28 @@ const statuses = ['draft', 'published', 'breaking']
 export function ArticleForm({
   article,
   categories,
+  canPublish = true,
 }: {
   article?: Record<string, any> | null
   categories: Record<string, any>[]
+  canPublish?: boolean
 }) {
   const isNew = !article?.id
   const defaultStatus = article?.status ?? (isNew ? 'published' : 'draft')
   const formRef = useRef<HTMLFormElement>(null)
   const [articleId, setArticleId] = useState(article?.id ?? '')
-  const [categoryName, setCategoryName] = useState(article?.category ?? article?.categories?.name ?? '')
-  const [autosaveState, setAutosaveState] = useState('Draft autosaves every 30 seconds')
-  const [isPending, startTransition] = useTransition()
+  const initialCategory =
+    article?.category ?? article?.categories?.name ?? categories[0]?.name ?? ''
+  const [categoryName, setCategoryName] = useState(initialCategory)
+  const [autosaveState, setAutosaveState] = useState(
+    canPublish ? 'Draft autosaves every 30 seconds' : 'Connect Supabase to enable autosave',
+  )
+  const [isAutosavePending, startTransition] = useTransition()
   const aiUsedRef = useRef(false)
+  const [saveState, saveAction, isSaving] = useActionState<SaveArticleState | null, FormData>(
+    saveArticle,
+    null,
+  )
 
   function values() {
     const form = formRef.current
@@ -33,6 +43,7 @@ export function ArticleForm({
   }
 
   async function autosave() {
+    if (!canPublish) return
     const payload = { ...values(), id: articleId } as Record<string, FormDataEntryValue | string>
     if (!String(payload.headline ?? '').trim()) return
     setAutosaveState('Autosaving...')
@@ -110,16 +121,27 @@ export function ArticleForm({
   }
 
   useEffect(() => {
+    if (!canPublish) return
     const id = window.setInterval(() => {
       startTransition(() => {
         void autosave()
       })
     }, 30000)
     return () => window.clearInterval(id)
-  }, [articleId])
+  }, [articleId, canPublish])
 
   return (
-    <form ref={formRef} action={saveArticle} onSubmit={handleSubmit} className="grid gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <form
+      ref={formRef}
+      action={saveAction}
+      onSubmit={handleSubmit}
+      className="grid gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+    >
+      {saveState?.error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {saveState.error}
+        </div>
+      ) : null}
       {articleId && <input type="hidden" name="id" value={articleId} />}
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Headline">
@@ -150,7 +172,7 @@ export function ArticleForm({
           <select
             className={inputClass}
             name="category_id"
-            defaultValue={article?.category_id ?? article?.category ?? ''}
+            defaultValue={article?.category_id ?? categories[0]?.id ?? ''}
             onChange={(event) => setCategoryName(event.currentTarget.selectedOptions[0]?.textContent ?? '')}
           >
             <option value="">Uncategorized</option>
@@ -211,8 +233,16 @@ export function ArticleForm({
         />
       </Field>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-500">{isPending ? 'Autosave queued...' : autosaveState}</p>
-        <Button type="submit">{defaultStatus === 'published' || defaultStatus === 'breaking' ? 'Publish article' : 'Save article'}</Button>
+        <p className="text-xs text-slate-500">
+          {isSaving ? 'Publishing...' : isAutosavePending ? 'Autosave queued...' : autosaveState}
+        </p>
+        <Button type="submit" disabled={!canPublish || isSaving}>
+          {isSaving
+            ? 'Publishing...'
+            : defaultStatus === 'published' || defaultStatus === 'breaking'
+              ? 'Publish article'
+              : 'Save article'}
+        </Button>
       </div>
     </form>
   )

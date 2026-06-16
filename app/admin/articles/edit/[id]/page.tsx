@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { ArticleForm } from '@/components/admin/article-form'
 import { ProtectedAdminPage } from '@/components/admin/protected-admin-page'
+import { SupabaseConfigBanner } from '@/components/admin/supabase-config-banner'
 import { AdminPageHeader } from '@/components/admin/ui'
 import { getAdminCategories } from '@/lib/admin/data'
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
@@ -9,7 +10,16 @@ import { createSupabaseAdminClient } from '@/lib/supabase/server'
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  if (!hasSupabaseAdminConfig()) notFound()
+  if (!hasSupabaseAdminConfig()) {
+    const categories = await getAdminCategories()
+    return (
+      <ProtectedAdminPage>
+        <SupabaseConfigBanner />
+        <AdminPageHeader title="Edit Article" description="Connect Supabase to load and edit stories." />
+        <ArticleForm categories={categories} canPublish={false} />
+      </ProtectedAdminPage>
+    )
+  }
 
   const supabase = createSupabaseAdminClient()
   const table = supabaseNewsTable
@@ -23,8 +33,9 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
 
   return (
     <ProtectedAdminPage>
+      <SupabaseConfigBanner />
       <AdminPageHeader title="Edit Article" description="Update your story and republish when ready." />
-      <ArticleForm article={article} categories={categories} />
+      <ArticleForm article={article} categories={categories} canPublish />
     </ProtectedAdminPage>
   )
 }

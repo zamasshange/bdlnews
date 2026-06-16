@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { NAV_LINKS } from '@/lib/data'
+import { withTimeout } from '@/lib/admin/query'
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { getCachedSyndicatedArticles } from '@/lib/syndicated-cache'
@@ -306,6 +307,26 @@ export async function getDashboardOverviewLight(): Promise<Pick<DashboardOvervie
     return { stats: emptyStats, publishedArticles: [], wireCount: 0 }
   }
 
+  return withTimeout(loadDashboardOverviewLight(), 4000, {
+    stats: emptyStats,
+    publishedArticles: [],
+    wireCount: 0,
+  })
+}
+
+async function loadDashboardOverviewLight(): Promise<Pick<DashboardOverview, 'stats' | 'publishedArticles' | 'wireCount'>> {
+  const emptyStats = {
+    totalArticles: 0,
+    publishedArticles: 0,
+    draftArticles: 0,
+    scheduledArticles: 0,
+    breakingStories: 0,
+    totalAuthors: 0,
+    totalViews: 0,
+    todayViews: 0,
+    activeReaders: 0,
+  }
+
   const supabase = createSupabaseAdminClient()
   const table = supabaseNewsTable
 
@@ -347,6 +368,13 @@ export async function getAdminCategories() {
     return fallbackCategories
   }
 
+  return withTimeout(loadAdminCategories(), 3000, NAV_LINKS.filter((name) => name !== 'Home').map((name) => ({
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    name,
+  })))
+}
+
+async function loadAdminCategories() {
   const supabase = createSupabaseAdminClient()
   const { data } = await safeQueryResponse(supabase.from('categories').select('*').order('name'))
   if (data?.length) return data
@@ -396,6 +424,10 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
 export async function getAdminArticlesList() {
   if (!hasSupabaseAdminConfig()) return []
 
+  return withTimeout(loadAdminArticlesList(), 5000, [])
+}
+
+async function loadAdminArticlesList() {
   const table = supabaseNewsTable
   const supabase = createSupabaseAdminClient()
   const { data } = await safeQueryResponse(
