@@ -14,6 +14,8 @@ import { getPublishedArticles, getCategoryBySlug } from '@/lib/news'
 import { categoryMetadata } from '@/lib/seo'
 
 export const revalidate = 120
+export const dynamicParams = true
+export const maxDuration = 30
 
 const staticPages = {
   'about-us': {
@@ -51,10 +53,9 @@ const staticPages = {
 type StaticPageSlug = keyof typeof staticPages
 
 export function generateStaticParams() {
-  return [
-    ...CATEGORY_SLUGS.map((slug) => ({ slug })),
-    ...Object.keys(staticPages).map((slug) => ({ slug })),
-  ]
+  // Render category and info pages on-demand (ISR) rather than prerendering at
+  // build time. They depend on live wire data, which can hang the build.
+  return []
 }
 
 export async function generateMetadata({
