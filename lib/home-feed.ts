@@ -105,7 +105,46 @@ export async function buildHomeFeed(
   const masterFeed = sortForHomepage([...own, ...external])
 
   if (!masterFeed.length) {
-    throw new Error('No stories available for homepage feed.')
+    const now = new Date().toISOString()
+    const placeholder: Article = {
+      slug: 'no-stories-yet',
+      title: 'BDL News is warming up',
+      dek: 'No stories are available yet. Connect your wire sources or publish your first article from the admin desk.',
+      category: 'World',
+      image: '/placeholder.jpg',
+      author: 'BDL Newsroom',
+      authorRole: 'Staff',
+      readingTime: 1,
+      publishedAt: now,
+      updatedAt: now,
+      region: 'Global',
+      readers: 0,
+      comments: 0,
+      shares: 0,
+      engagement: 0,
+      sentiment: 'neutral',
+      trendDelta: 0,
+    }
+
+    return {
+      featured: placeholder,
+      secondFeature: placeholder,
+      featureTwo: placeholder,
+      sideStories: [],
+      gridStories: [],
+      resources: [],
+      keepReadingStories: [],
+      remainingStories: [],
+      wireHighlights: [],
+      spotlightStories: [],
+      trendingTopics: [],
+      mode: 'wire',
+      stats: {
+        ownCount: 0,
+        wireCount: 0,
+        recentOwnCount: 0,
+      },
+    }
   }
 
   const used = new Set<string>()
