@@ -19,6 +19,16 @@ function readTag(item: string, tag: string) {
   return item.match(new RegExp(`<${tag}[^>]*>([^<]*)<\\/${tag}>`, 'i'))?.[1]?.trim() ?? ''
 }
 
+function extractImageFromHtml(html: string) {
+  const img =
+    html.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] ||
+    html.match(/src=["']([^"']+)["'][^>]*>/i)?.[1]
+  if (!img) return null
+  if (img.startsWith('http')) return img
+  if (img.startsWith('//')) return `https:${img}`
+  return null
+}
+
 function parseRss(xml: string, sourceLabel: string): ExternalNewsItem[] {
   if (!xml.includes('<item') && !xml.includes('<entry')) return []
 
@@ -31,14 +41,15 @@ function parseRss(xml: string, sourceLabel: string): ExternalNewsItem[] {
         readTag(item, 'link') ||
         item.match(/<link[^>]+href=["']([^"']+)["']/i)?.[1]?.trim() ||
         readTag(item, 'guid')
-      const description = stripTags(
-        readTag(item, 'description') || readTag(item, 'content:encoded') || readTag(item, 'summary'),
-      )
+      const rawDescription =
+        readTag(item, 'description') || readTag(item, 'content:encoded') || readTag(item, 'summary')
+      const description = stripTags(rawDescription)
       const publishedAt = readTag(item, 'pubDate') || readTag(item, 'published') || readTag(item, 'updated')
       const imageUrl =
         item.match(/<media:content[^>]+url=["']([^"']+)["']/i)?.[1] ||
-        item.match(/<enclosure[^>]+url=["']([^"']+)["']/i)?.[1] ||
         item.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i)?.[1] ||
+        item.match(/<enclosure[^>]+url=["']([^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/i)?.[1] ||
+        extractImageFromHtml(rawDescription) ||
         null
 
       if (!title || !link) return null

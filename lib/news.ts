@@ -49,7 +49,7 @@ function mapExternalNewsItem(row: ExternalNewsItem, forcedCategory?: Category): 
     dek: row.description || body.split(/\n{2,}/)[0]?.slice(0, 280) || title,
     content: body,
     category: forcedCategory ?? toCategory(row.category ?? undefined),
-    image: row.imageUrl || '/placeholder.jpg',
+    image: row.imageUrl || '',
     imageCredit: sourceName,
     author: sourceName,
     authorRole: 'Syndicated source',

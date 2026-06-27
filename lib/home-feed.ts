@@ -100,7 +100,7 @@ export async function buildHomeFeed(
   trendingArticles: Article[],
 ): Promise<HomeFeed> {
   const own = sortByDate(ownArticles)
-  const external = sortByDate(await ensureArticleImages(externalArticles, 60))
+  const external = sortByDate(await ensureArticleImages(externalArticles, 28))
   const recentOwn = own.filter(isFreshOwn)
   const masterFeed = sortForHomepage([...own, ...external])
 
