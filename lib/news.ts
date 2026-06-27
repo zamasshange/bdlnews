@@ -1,11 +1,11 @@
 import 'server-only'
 
-import { createHash } from 'crypto'
 import { type Article, type AuthorProfile, type Category, type LiveItem, NAV_LINKS, sampleAuthors, podcastEpisodes } from '@/lib/data'
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { fetchExternalNews, type ExternalNewsItem } from '@/lib/external-news'
 import { fetchWireFromRssFeeds } from '@/lib/wire-rss'
+import { externalArticleSlug, matchesWireSlug, normalizeWireUrl } from '@/lib/wire-slug'
 import {
   articleMatchesCategorySlug,
   categoryLabelFromSlug,
@@ -31,20 +31,19 @@ function slugifyCategory(value?: string | null) {
     .replace(/[^a-z0-9-]/g, '')
 }
 
-export function externalArticleSlug(url: string) {
-  return `ext-${createHash('sha256').update(url).digest('hex').slice(0, 12)}`
-}
+export { externalArticleSlug } from '@/lib/wire-slug'
 
 function mapExternalNewsItem(row: ExternalNewsItem, forcedCategory?: Category): Article {
   const title = row.title || 'Untitled story'
   const publishedAt = row.publishedAt || new Date().toISOString()
   const sourceName = row.source || 'Original publisher'
+  const canonicalUrl = normalizeWireUrl(row.url)
   const rawBody = isPaidPlanPlaceholder(row.content) ? row.description || '' : row.content || row.description || ''
   const cleaned = cleanWireExcerpt(rawBody) || cleanWireExcerpt(row.description) || ''
   const body = isSyndicatedContentComplete(cleaned) ? cleaned : ''
   return {
-    id: row.url,
-    slug: externalArticleSlug(row.url),
+    id: canonicalUrl,
+    slug: externalArticleSlug(canonicalUrl),
     title,
     dek: row.description || body.split(/\n{2,}/)[0]?.slice(0, 280) || title,
     content: body,
@@ -60,7 +59,7 @@ function mapExternalNewsItem(row: ExternalNewsItem, forcedCategory?: Category): 
     engagement: 0,
     sentiment: 'neutral',
     trendDelta: 12,
-    externalUrl: row.url,
+    externalUrl: canonicalUrl,
   }
 }
 
@@ -201,6 +200,29 @@ export async function getExternalNewsItems(query?: string, limit = 12): Promise<
   return articles
 }
 
+async function searchFreshWireForSlug(slug: string): Promise<Article | undefined> {
+  const candidates: Article[] = []
+
+  try {
+    const rssItems = await fetchWireFromRssFeeds(120)
+    candidates.push(...rssItems.map((item) => mapExternalNewsItem(item)))
+  } catch {
+    // RSS fallback is best-effort.
+  }
+
+  try {
+    const results = await fetchExternalNews({ provider: 'all' })
+    for (const item of results) {
+      if (!item.url || !item.title) continue
+      candidates.push(mapExternalNewsItem(item))
+    }
+  } catch {
+    // API fallback is best-effort.
+  }
+
+  return candidates.find((article) => matchesWireSlug(article.slug, slug, article.externalUrl))
+}
+
 async function findExternalArticleBySlug(slug: string) {
   if (!slug.startsWith('ext-')) return undefined
 
@@ -208,7 +230,7 @@ async function findExternalArticleBySlug(slug: string) {
   if (direct) return direct
 
   const cached = await getCachedSyndicatedArticles(500)
-  const fromCache = cached.find((article) => article.slug === slug)
+  const fromCache = cached.find((article) => matchesWireSlug(article.slug, slug, article.externalUrl))
   if (fromCache) return fromCache
 
   const indexEntry = await getSyndicatedSlugIndexEntry(slug)
@@ -216,28 +238,13 @@ async function findExternalArticleBySlug(slug: string) {
     return articleFromSlugIndex(indexEntry)
   }
 
-  try {
-    const results = await fetchExternalNews({ provider: 'all' })
-    let found: Article | undefined
-    const batch: Article[] = []
-
-    for (const item of results) {
-      if (!item.url || !item.title) continue
-      const mapped = mapExternalNewsItem(item)
-      batch.push(mapped)
-      if (!found && mapped.slug === slug) {
-        found = mapped
-      }
-    }
-
-    if (batch.length) {
-      await persistSyndicatedArticles(batch)
-    }
-
-    return found
-  } catch {
-    return undefined
+  const fresh = await searchFreshWireForSlug(slug)
+  if (fresh) {
+    await persistSyndicatedArticles([fresh])
+    return fresh
   }
+
+  return undefined
 }
 
 function hasGoodWireBody(content?: string | null) {

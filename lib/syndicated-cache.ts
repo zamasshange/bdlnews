@@ -2,6 +2,7 @@ import 'server-only'
 
 import type { Article } from '@/lib/data'
 import { categoryFallbackImage, hasRealImage } from '@/lib/feed-images'
+import { externalArticleSlug, matchesWireSlug, normalizeWireUrl } from '@/lib/wire-slug'
 import { isGarbageArticleContent, sanitizeArticleBody } from '@/lib/syndicated-content'
 import { hasSupabaseAdminConfig } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
@@ -66,9 +67,10 @@ function recordToArticle(record: SyndicatedRecord): Article {
 }
 
 function articleToRecord(article: Article, enriched = false): SyndicatedRecord {
+  const url = normalizeWireUrl(article.externalUrl ?? article.id ?? article.slug)
   return {
-    slug: article.slug,
-    url: article.externalUrl ?? article.id ?? article.slug,
+    slug: externalArticleSlug(url),
+    url,
     title: article.title,
     description: article.dek || article.content?.slice(0, 280) || '',
     fullContent: article.content,
@@ -134,9 +136,10 @@ async function writeSlugIndex(index: Record<string, SyndicatedSlugIndexEntry>) {
 }
 
 function slugIndexEntryFromArticle(article: Article): SyndicatedSlugIndexEntry {
+  const url = normalizeWireUrl(article.externalUrl ?? article.id ?? article.slug)
   return {
-    slug: article.slug,
-    url: article.externalUrl ?? article.id ?? article.slug,
+    slug: externalArticleSlug(url),
+    url,
     title: article.title,
     description: article.dek || '',
     imageUrl: hasRealImage(article.image) ? article.image : null,
@@ -179,8 +182,9 @@ export async function rememberSyndicatedSlugs(articles: Article[]) {
   const next = { ...index }
 
   for (const article of wireArticles) {
-    next[article.slug] = slugIndexEntryFromArticle(article)
-    runtimeSlugIndex.set(article.slug, next[article.slug])
+    const entry = slugIndexEntryFromArticle(article)
+    next[entry.slug] = entry
+    runtimeSlugIndex.set(entry.slug, entry)
   }
 
   const sorted = Object.values(next).sort(
@@ -197,8 +201,19 @@ export async function rememberSyndicatedSlugs(articles: Article[]) {
 export async function getSyndicatedSlugIndexEntry(slug: string) {
   const runtime = runtimeSlugIndex.get(slug)
   if (runtime) return runtime
+
+  for (const entry of runtimeSlugIndex.values()) {
+    if (matchesWireSlug(entry.slug, slug, entry.url)) return entry
+  }
+
   const index = await readSlugIndex()
-  return index[slug]
+  if (index[slug]) return index[slug]
+
+  for (const entry of Object.values(index)) {
+    if (matchesWireSlug(entry.slug, slug, entry.url)) return entry
+  }
+
+  return undefined
 }
 
 async function readCache(): Promise<Record<string, SyndicatedRecord>> {
@@ -206,7 +221,9 @@ async function readCache(): Promise<Record<string, SyndicatedRecord>> {
     return memoryCache
   }
 
-  if (!hasSupabaseAdminConfig()) return {}
+  if (!hasSupabaseAdminConfig()) {
+    return memoryCache ?? {}
+  }
 
   try {
     const supabase = createSupabaseAdminClient()
@@ -232,8 +249,12 @@ export async function persistSyndicatedArticles(articles: Article[], enriched = 
 
   if (!hasSupabaseAdminConfig()) {
     for (const article of wireArticles) {
-      runtimeSlugIndex.set(article.slug, slugIndexEntryFromArticle(article))
+      const entry = slugIndexEntryFromArticle(article)
+      runtimeSlugIndex.set(entry.slug, entry)
+      if (!memoryCache) memoryCache = {}
+      memoryCache[entry.slug] = articleToRecord(article, enriched)
     }
+    memoryCacheAt = Date.now()
     return
   }
 
@@ -241,9 +262,10 @@ export async function persistSyndicatedArticles(articles: Article[], enriched = 
   const next = { ...existing }
 
   for (const article of wireArticles) {
-    const previous = existing[article.slug]
-    next[article.slug] = {
-      ...articleToRecord(article, enriched),
+    const slug = externalArticleSlug(normalizeWireUrl(article.externalUrl ?? article.id ?? article.slug))
+    const previous = existing[slug]
+    next[slug] = {
+      ...articleToRecord({ ...article, slug }, enriched),
       enrichedAt: enriched ? new Date().toISOString() : previous?.enrichedAt,
     }
   }
@@ -283,19 +305,39 @@ export async function getCachedSyndicatedArticles(limit = 50): Promise<Article[]
 
 export async function getSyndicatedArticleFromCache(slug: string): Promise<Article | undefined> {
   const cache = await readCache()
-  const record = cache[slug]
-  if (!record) return undefined
-  return recordToArticle(record)
+  if (cache[slug]) return recordToArticle(cache[slug])
+
+  for (const record of Object.values(cache)) {
+    if (matchesWireSlug(record.slug, slug, record.url)) {
+      return recordToArticle(record)
+    }
+  }
+
+  const indexEntry = await getSyndicatedSlugIndexEntry(slug)
+  if (indexEntry) return articleFromSlugIndex(indexEntry)
+
+  return undefined
 }
 
 export async function getSyndicatedRecord(slug: string): Promise<SyndicatedRecord | undefined> {
   const cache = await readCache()
-  return cache[slug]
+  if (cache[slug]) return cache[slug]
+
+  for (const record of Object.values(cache)) {
+    if (matchesWireSlug(record.slug, slug, record.url)) {
+      return record
+    }
+  }
+
+  return undefined
 }
 
 export async function getSyndicatedArticleByUrl(url: string): Promise<Article | undefined> {
+  const canonical = normalizeWireUrl(url)
   const cache = await readCache()
-  const record = Object.values(cache).find((item) => item.url === url)
+  const record =
+    Object.values(cache).find((item) => normalizeWireUrl(item.url) === canonical) ??
+    Object.values(cache).find((item) => item.url === url)
   if (!record) return undefined
   return recordToArticle(record)
 }

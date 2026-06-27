@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type { ExternalNewsItem } from '@/lib/external-news'
+import { normalizeWireUrl } from '@/lib/wire-slug'
 
 const WIRE_RSS_FEEDS = [
   'https://feeds.bbci.co.uk/news/world/rss.xml',
@@ -54,12 +55,14 @@ function parseRss(xml: string, sourceLabel: string): ExternalNewsItem[] {
 
       if (!title || !link) return null
 
+      const canonicalUrl = normalizeWireUrl(link)
+
       return {
         provider: 'newsdata' as const,
         title,
         description: description.slice(0, 500),
         content: description,
-        url: link,
+        url: canonicalUrl,
         imageUrl,
         source: sourceLabel,
         publishedAt: publishedAt || new Date().toISOString(),
