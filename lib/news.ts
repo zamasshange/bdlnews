@@ -5,6 +5,7 @@ import { type Article, type AuthorProfile, type Category, type LiveItem, NAV_LIN
 import { hasSupabaseAdminConfig, supabaseNewsTable } from '@/lib/supabase/config'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 import { fetchExternalNews, type ExternalNewsItem } from '@/lib/external-news'
+import { fetchWireFromRssFeeds } from '@/lib/wire-rss'
 import {
   articleMatchesCategorySlug,
   categoryLabelFromSlug,
@@ -157,8 +158,18 @@ export async function getLatestWireArticles(limit = 120): Promise<Article[]> {
   }
 
   const cached = await getCachedSyndicatedArticles(Math.max(limit, 160))
-  const merged = dedupeArticles([...fresh, ...cached])
+  let merged = dedupeArticles([...fresh, ...cached])
   merged.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+
+  if (!merged.length) {
+    const rssItems = await fetchWireFromRssFeeds(limit)
+    if (rssItems.length) {
+      const rssArticles = rssItems.map((item) => mapExternalNewsItem(item))
+      await persistSyndicatedArticles(rssArticles)
+      merged = dedupeArticles(rssArticles)
+    }
+  }
+
   return merged.slice(0, limit)
 }
 

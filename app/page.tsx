@@ -58,40 +58,6 @@ export default async function HomePage() {
     ? await buildHomeFeed(articles, externalArticles, trendingArticles)
     : await buildExternalOnlyFeed(externalArticles, trendingArticles)
 
-  const hasStories = feed.stats.ownCount + feed.stats.wireCount > 0
-
-  if (!hasStories) {
-    return (
-      <SiteShell showTicker>
-        <JsonLd data={homepageItemListJsonLd([])} />
-        <section className="jox-container py-16">
-          <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-card p-8 text-center">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-primary">BDL News</p>
-            <h1 className="mt-3 text-3xl font-semibold text-foreground">No stories yet</h1>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              The homepage feed is empty right now. Publish your first article from the admin desk, or connect your wire sources.
-            </p>
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Link
-                href="/admin"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:brightness-110"
-              >
-                Open Admin Desk
-                <ArrowUpRight className="size-4" />
-              </Link>
-              <Link
-                href="/about-us"
-                className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-accent"
-              >
-                About BDL News
-              </Link>
-            </div>
-          </div>
-        </section>
-      </SiteShell>
-    )
-  }
-
   const {
     featured,
     secondFeature,
